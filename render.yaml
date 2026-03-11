@@ -16,8 +16,9 @@ services:
           name: goldies-db
           property: connectionString
 
-  - type: static_site
+  - type: web
     name: goldies-frontend
+    env: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist

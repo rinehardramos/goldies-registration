@@ -2,41 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { CheckCircle, AlertCircle, ArrowLeft, ShieldCheck } from 'lucide-react';
-
-const COUNTDOWN_TARGET = new Date('July 25, 2026 10:00:00').getTime();
+import Countdown from '../components/Countdown';
 
 const RegistrationPage = () => {
   const navigate = useNavigate();
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [formData, setFormData] = useState({ batchYear: '', fullName: '', email: '', password: '' });
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
 
   // Password Validation State
-  const [validations, setValidations] = useState({
-    length: false,
-    uppercase: false,
-    number: false,
-    special: false
-  });
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date().getTime();
-      const distance = COUNTDOWN_TARGET - now;
-      if (distance < 0) {
-        clearInterval(timer);
-      } else {
-        setTimeLeft({
-          days: Math.floor(distance / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-          minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
-          seconds: Math.floor((distance % (1000 * 60)) / 1000)
-        });
-      }
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   const validatePassword = (pass) => {
     setValidations({
@@ -81,15 +55,7 @@ const RegistrationPage = () => {
           <ArrowLeft size={18} /> Back to Login
         </Link>
         <h1>Goldies Day 2026</h1>
-        
-        <div className="countdown">
-          {Object.entries(timeLeft).map(([label, value]) => (
-            <div className="countdown-item" key={label}>
-              <span className="countdown-value">{value}</span>
-              <span className="countdown-label">{label}</span>
-            </div>
-          ))}
-        </div>
+        <Countdown />
 
         <form onSubmit={handleSubmit} style={{ marginTop: '2rem' }}>
           <div className="form-group">

@@ -1,3 +1,7 @@
+databases:
+  - name: goldies-db
+    plan: free
+
 services:
   - type: web
     name: goldies-backend
@@ -7,14 +11,10 @@ services:
     startCommand: node index.js
     rootDir: backend
     envVars:
-      - key: PORT
-        value: 5001
-      - key: DB_PATH
-        value: /data/goldies.db
-    disk:
-      name: goldies-data
-      mountPath: /data
-      sizeGB: 1
+      - key: DATABASE_URL
+        fromDatabase:
+          name: goldies-db
+          property: connectionString
 
   - type: web
     name: goldies-frontend

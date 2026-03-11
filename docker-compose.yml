@@ -1,4 +1,16 @@
 services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=goldie
+      - POSTGRES_PASSWORD=goldiepassword
+      - POSTGRES_DB=goldies_registration
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   backend:
     build: ./backend
     ports:
@@ -6,10 +18,11 @@ services:
     volumes:
       - ./backend:/app:delegated
       - /app/node_modules
-      - goldies_data:/data
     environment:
       - PORT=5001
-      - DB_PATH=/data/goldies.db
+      - DATABASE_URL=postgres://goldie:goldiepassword@db:5432/goldies_registration
+    depends_on:
+      - db
 
   frontend:
     build: ./frontend
@@ -24,4 +37,4 @@ services:
       - backend
 
 volumes:
-  goldies_data:
+  postgres_data:

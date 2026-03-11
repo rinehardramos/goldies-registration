@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { LogIn, UserPlus, AlertCircle } from 'lucide-react';
+import Countdown from '../components/Countdown';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -31,6 +32,7 @@ const LoginPage = () => {
     <div className="container">
       <div className="glass-card">
         <h1>Goldies Day 2026</h1>
+        <Countdown />
         <h2 style={{ textAlign: 'center', marginBottom: '2rem', color: 'var(--gold)' }}>Welcome Back</h2>
 
         <form onSubmit={handleSubmit}>

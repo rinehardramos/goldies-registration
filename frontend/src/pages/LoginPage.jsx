@@ -30,8 +30,9 @@ const LoginPage = () => {
       if (userData.isAdmin) {
         navigate('/admin');
       } else {
-        alert(`Welcome back, ${userData.fullName}!`);
-        // We could also navigate to a profile or home page here if needed
+        console.log(`Welcome back, ${userData.fullName}!`);
+        // Navigate to root to clear the form and show success silently
+        navigate('/');
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Invalid email or password');

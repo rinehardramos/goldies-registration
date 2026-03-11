@@ -17,7 +17,7 @@ services:
           property: connectionString
 
   - type: web
-    name: goldies-frontend
+    name: goldies2026
     env: static
     rootDir: frontend
     buildCommand: npm install && npm run build

@@ -19,9 +19,18 @@ const LoginPage = () => {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
       const response = await axios.post(`${apiUrl}/api/login`, { email, password });
       setStatus('success');
-      // In a real app, store token/user data
-      console.log('Login success:', response.data);
-      alert(`Welcome back, ${response.data.user.fullName}!`);
+      
+      const userData = response.data.user;
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      console.log('Login success:', userData);
+      
+      if (userData.isAdmin) {
+        navigate('/admin');
+      } else {
+        alert(`Welcome back, ${userData.fullName}!`);
+        // We could also navigate to a profile or home page here if needed
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Invalid email or password');
       setStatus('error');

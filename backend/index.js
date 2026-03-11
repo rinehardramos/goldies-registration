@@ -33,6 +33,7 @@ const initDb = async (retries = 5) => {
           full_name TEXT NOT NULL,
           email TEXT NOT NULL UNIQUE,
           password TEXT NOT NULL,
+          is_admin BOOLEAN DEFAULT FALSE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
@@ -95,7 +96,14 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    res.json({ message: 'Login successful', user: { id: user.id, fullName: user.full_name } });
+    res.json({ 
+      message: 'Login successful', 
+      user: { 
+        id: user.id, 
+        fullName: user.full_name,
+        isAdmin: user.is_admin 
+      } 
+    });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Failed to login' });

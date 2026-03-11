@@ -11,6 +11,12 @@ const RegistrationPage = () => {
   const [error, setError] = useState('');
 
   // Password Validation State
+  const [validations, setValidations] = useState({
+    length: false,
+    uppercase: false,
+    number: false,
+    special: false
+  });
 
   const validatePassword = (pass) => {
     setValidations({

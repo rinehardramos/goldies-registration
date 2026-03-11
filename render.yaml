@@ -28,7 +28,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        fromService:
-          name: goldies-backend
-          type: web
-          property: host
+        value: https://goldies-backend.onrender.com

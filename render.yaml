@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: goldies-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node index.js
+    rootDir: backend
+    envVars:
+      - key: PORT
+        value: 5001
+      - key: DB_PATH
+        value: /data/goldies.db
+    disk:
+      name: goldies-data
+      mountPath: /data
+      sizeGB: 1
+
+  - type: web
+    name: goldies-frontend
+    env: static
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: goldies-backend
+          type: web
+          property: host

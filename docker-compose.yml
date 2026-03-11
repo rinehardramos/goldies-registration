@@ -1,0 +1,27 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./backend:/app:delegated
+      - /app/node_modules
+      - goldies_data:/data
+    environment:
+      - PORT=5001
+      - DB_PATH=/data/goldies.db
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:5001
+    depends_on:
+      - backend
+
+volumes:
+  goldies_data:

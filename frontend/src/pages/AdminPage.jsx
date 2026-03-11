@@ -30,7 +30,9 @@ const AdminPage = () => {
   const fetchRegistrations = async () => {
     try {
       setLoading(true);
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      if (!apiUrl.startsWith('http')) apiUrl = `https://${apiUrl}`;
+      
       const response = await axios.get(`${apiUrl}/api/registrations`);
       setRegistrations(response.rows || response.data || []);
       setLoading(false);

@@ -16,7 +16,9 @@ const LoginPage = () => {
     setStatus('loading');
     setError('');
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      if (!apiUrl.startsWith('http')) apiUrl = `https://${apiUrl}`;
+      
       const response = await axios.post(`${apiUrl}/api/login`, { email, password });
       setStatus('success');
       

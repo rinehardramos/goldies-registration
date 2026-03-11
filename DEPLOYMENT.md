@@ -18,7 +18,19 @@ Go to your GitHub Repository Settings > Secrets and Variables > Actions and add 
 ## 3. Automatic Deployment
 Every push to the `main` branch will now trigger the GitHub Action, which will signal Render to redeploy your services based on the Blueprint.
 
-## 4. Production URLs
-- **Frontend**: Render will provide a unique URL (e.g., `https://goldies-frontend.onrender.com`).
+## 4. Database Migrations and Seeding
+After your first deployment, you will want to seed an administrative user to access the Admin Dashboard.
+
+1. Go to your Render Dashboard and open the **Backend** service.
+2. Navigate to the **Shell** tab (on the left menu).
+3. In the terminal, run the following command:
+   ```bash
+   npm run seed
+   ```
+4. This script connects to the production PostgreSQL database, ensures the `is_admin` column exists, and seeds a user with the email `admin@goldies.com` (password: `Admin123!`).
+   *(Tip: You can customize these credentials by adding `ADMIN_EMAIL` and `ADMIN_PASSWORD` to your Environment Variables prior to running).*
+
+## 5. Production URLs
+- **Frontend**: Render will provide a unique URL (e.g., `https://goldies2026.onrender.com`).
 - **Backend**: Render will provide a unique URL (e.g., `https://goldies-backend.onrender.com`).
 - The Static site (Frontend) will automatically point to the Backend service URL via Render's internal service discovery.

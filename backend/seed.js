@@ -49,9 +49,10 @@ const seedAdmin = async () => {
       );
       console.log('Successfully created admin user!');
     } else {
-      console.log('Administrator already exists. Updating privileges...');
-      await pool.query('UPDATE registrations SET is_admin = TRUE WHERE email = $1', [adminEmail]);
-      console.log('Admin privileges verified/updated.');
+      console.log('Administrator already exists. Updating privileges and resetting password...');
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
+      await pool.query('UPDATE registrations SET is_admin = TRUE, password = $2 WHERE email = $1', [adminEmail, hashedPassword]);
+      console.log('Admin privileges and password verified/updated.');
     }
     
   } catch (error) {

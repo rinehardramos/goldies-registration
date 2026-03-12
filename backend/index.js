@@ -105,18 +105,23 @@ app.post('/api/login', async (req, res) => {
   }
 
   try {
+    console.log(`Login attempt for: ${email}`);
     const query = 'SELECT * FROM registrations WHERE email = $1';
     const result = await pool.query(query, [email]);
     const user = result.rows[0];
 
     if (!user) {
+      console.log(`Login failed: User not found for ${email}`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      console.log(`Login failed: Password mismatch for ${email}`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+
+    console.log(`Login successful for: ${email}`);
 
     res.json({ 
       message: 'Login successful', 

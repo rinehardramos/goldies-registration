@@ -28,12 +28,20 @@ const ProfilePage = () => {
   });
 
   useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    if (!userStr) {
+    let storedUser = null;
+    try {
+      storedUser = (userStr && userStr !== 'undefined') ? JSON.parse(userStr) : null;
+    } catch (e) {
+      console.error('Failed to parse user from localStorage', e);
+      localStorage.removeItem('user');
       navigate('/');
       return;
     }
-    const storedUser = JSON.parse(userStr);
+
+    if (!storedUser) {
+      navigate('/');
+      return;
+    }
     setUser(storedUser);
     fetchProfile(storedUser.id);
   }, [navigate]);

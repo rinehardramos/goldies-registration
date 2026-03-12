@@ -11,7 +11,14 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const loggedInUser = JSON.parse(localStorage.getItem('user'));
+  const loggedInUser = (() => {
+    try {
+      const u = localStorage.getItem('user');
+      return u && u !== 'undefined' ? JSON.parse(u) : null;
+    } catch (e) {
+      return null;
+    }
+  })();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,7 +32,9 @@ const LoginPage = () => {
       setStatus('success');
       
       const userData = response.data.user;
-      localStorage.setItem('user', JSON.stringify(userData));
+      if (userData) {
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
       
       console.log('Login success:', userData);
       

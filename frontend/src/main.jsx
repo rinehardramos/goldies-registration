@@ -3,6 +3,14 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
+// Sanitization for corrupted localStorage
+try {
+  const user = localStorage.getItem('user');
+  if (user === 'undefined' || user === 'null') {
+    localStorage.removeItem('user');
+  }
+} catch (e) {}
+
 // Global error fallback to prevent blank pages
 window.addEventListener('error', (event) => {
   console.error('Global error caught:', event.error);

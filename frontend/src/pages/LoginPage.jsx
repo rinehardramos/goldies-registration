@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { LogIn, UserPlus, AlertCircle } from 'lucide-react';
+import { LogIn, UserPlus, AlertCircle, User } from 'lucide-react';
 import Countdown from '../components/Countdown';
 
 const LoginPage = () => {
@@ -10,6 +10,8 @@ const LoginPage = () => {
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  const loggedInUser = JSON.parse(localStorage.getItem('user'));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,9 +32,7 @@ const LoginPage = () => {
       if (userData.isAdmin) {
         navigate('/admin');
       } else {
-        console.log(`Welcome back, ${userData.fullName}!`);
-        // Navigate to root to clear the form and show success silently
-        navigate('/');
+        navigate('/profile');
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Invalid email or password');
@@ -90,11 +90,20 @@ const LoginPage = () => {
         </form>
 
         <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-          <p style={{ opacity: 0.8 }}>Don't have an account?</p>
-          <Link to="/register" style={{ color: 'var(--gold)', fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '0.5rem' }}>
-            <UserPlus size={18} />
-            Register Here
-          </Link>
+          {loggedInUser ? (
+            <Link to={loggedInUser.isAdmin ? "/admin" : "/profile"} style={{ color: 'var(--gold)', fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <User size={18} />
+              Go to {loggedInUser.isAdmin ? "Admin Dashboard" : "My Profile"}
+            </Link>
+          ) : (
+            <>
+              <p style={{ opacity: 0.8 }}>Don't have an account?</p>
+              <Link to="/register" style={{ color: 'var(--gold)', fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '0.5rem' }}>
+                <UserPlus size={18} />
+                Register Here
+              </Link>
+            </>
+          )}
         </div>
       </div>
       <div className="footer">"Let's bleed gold!"</div>

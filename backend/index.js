@@ -144,6 +144,78 @@ app.put('/api/registrations/:id', async (req, res) => {
   }
 });
 
+app.get('/api/profile/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT id, batch_year as "batchYear", full_name as "fullName", email, is_admin as "isAdmin" FROM registrations WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Fetch profile error:', error);
+    res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
+app.put('/api/profile/:id', async (req, res) => {
+  const { id } = req.params;
+  const { fullName, batchYear, email } = req.body;
+
+  if (!fullName || !batchYear || !email) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    const query = 'UPDATE registrations SET full_name = $1, batch_year = $2, email = $3 WHERE id = $4 RETURNING id, full_name as "fullName", batch_year as "batchYear", email';
+    const values = [fullName, batchYear, email, id];
+    const result = await pool.query(query, values);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ message: 'Profile updated successfully', user: result.rows[0] });
+  } catch (error) {
+    if (error.code === '23505') {
+      return res.status(400).json({ error: 'Email already in use' });
+    }
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+app.post('/api/profile/:id/change-password', async (req, res) => {
+  const { id } = req.params;
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    // 1. Verify current password
+    const userResult = await pool.query('SELECT password FROM registrations WHERE id = $1', [id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, userResult.rows[0].password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Incorrect current password' });
+    }
+
+    // 2. Hash and update new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE registrations SET password = $1 WHERE id = $2', [hashedNewPassword, id]);
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });

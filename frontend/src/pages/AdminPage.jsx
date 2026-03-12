@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Search, Filter, Loader2, ArrowLeft, Users, Edit2, Check, X } from 'lucide-react';
+import { Search, Filter, Loader2, ArrowLeft, Users, Edit2, Check, X, User } from 'lucide-react';
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -83,9 +83,14 @@ const AdminPage = () => {
           <Link to="/" style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', opacity: 0.7 }}>
             <ArrowLeft size={18} /> Back to Login
           </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Users size={24} style={{ color: 'var(--gold)' }} />
-            <h2 style={{ margin: 0, background: 'none', color: 'var(--gold)', fontSize: '1.5rem', WebkitTextFillColor: 'initial' }}>Admin Dashboard</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <Link to="/profile" style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', opacity: 0.8, fontSize: '0.9rem' }}>
+              <User size={18} /> My Profile
+            </Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Users size={24} style={{ color: 'var(--gold)' }} />
+              <h2 style={{ margin: 0, background: 'none', color: 'var(--gold)', fontSize: '1.5rem', WebkitTextFillColor: 'initial' }}>Admin Dashboard</h2>
+            </div>
           </div>
         </div>
 

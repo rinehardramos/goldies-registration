@@ -13,7 +13,8 @@ const port = process.env.PORT || 5001;
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5180',
-  'https://goldies2026.onrender.com'
+  'https://goldies2026.onrender.com',
+  'https://goldies-backend-s3j5.onrender.com'
 ];
 
 app.use(cors({

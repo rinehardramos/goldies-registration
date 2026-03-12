@@ -120,6 +120,30 @@ app.get('/api/registrations', async (req, res) => {
   }
 });
 
+app.put('/api/registrations/:id', async (req, res) => {
+  const { id } = req.params;
+  const { fullName, batchYear, email } = req.body;
+
+  if (!fullName || !batchYear || !email) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    const query = 'UPDATE registrations SET full_name = $1, batch_year = $2, email = $3 WHERE id = $4 RETURNING *';
+    const values = [fullName, batchYear, email, id];
+    const result = await pool.query(query, values);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Registration not found' });
+    }
+    
+    res.json({ message: 'Registration updated successfully', user: result.rows[0] });
+  } catch (error) {
+    console.error('Update error:', error);
+    res.status(500).json({ error: 'Failed to update registration' });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });

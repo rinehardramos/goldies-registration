@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Search, Filter, Loader2, ArrowLeft, Users } from 'lucide-react';
+import { Search, Filter, Loader2, ArrowLeft, Users, Edit2, Check, X } from 'lucide-react';
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -10,6 +10,8 @@ const AdminPage = () => {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [batchFilter, setBatchFilter] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editFormData, setEditFormData] = useState({ fullName: '', batchYear: '', email: '' });
 
   useEffect(() => {
     // Simple admin check
@@ -39,6 +41,29 @@ const AdminPage = () => {
     } catch (err) {
       setError('Failed to load registrations');
       setLoading(false);
+    }
+  };
+
+  const handleEditClick = (reg) => {
+    setEditingId(reg.id);
+    setEditFormData({ fullName: reg.fullName, batchYear: reg.batchYear, email: reg.email });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+  };
+
+  const handleSaveEdit = async (id) => {
+    try {
+      let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      if (!apiUrl.startsWith('http')) apiUrl = `https://${apiUrl}`;
+      
+      await axios.put(`${apiUrl}/api/registrations/${id}`, editFormData);
+      
+      setRegistrations(registrations.map(reg => reg.id === id ? { ...reg, ...editFormData } : reg));
+      setEditingId(null);
+    } catch (err) {
+      alert('Failed to update registration');
     }
   };
 
@@ -105,19 +130,44 @@ const AdminPage = () => {
                   <th style={{ padding: '12px' }}>Batch</th>
                   <th style={{ padding: '12px' }}>Email</th>
                   <th style={{ padding: '12px' }}>Registered On</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRegistrations.length > 0 ? filteredRegistrations.map((reg) => (
                   <tr key={reg.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '12px' }}>{reg.fullName}</td>
-                    <td style={{ padding: '12px' }}><span className="badge">{reg.batchYear}</span></td>
-                    <td style={{ padding: '12px' }}>{reg.email}</td>
-                    <td style={{ padding: '12px', opacity: 0.7 }}>{new Date(reg.createdAt).toLocaleDateString()}</td>
+                    {editingId === reg.id ? (
+                      <>
+                        <td style={{ padding: '12px' }}>
+                          <input type="text" value={editFormData.fullName} onChange={e => setEditFormData({...editFormData, fullName: e.target.value})} style={{ width: '100%', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+                        </td>
+                        <td style={{ padding: '12px' }}>
+                          <input type="text" value={editFormData.batchYear} onChange={e => setEditFormData({...editFormData, batchYear: e.target.value})} style={{ width: '80px', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+                        </td>
+                        <td style={{ padding: '12px' }}>
+                          <input type="email" value={editFormData.email} onChange={e => setEditFormData({...editFormData, email: e.target.value})} style={{ width: '100%', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+                        </td>
+                        <td style={{ padding: '12px', opacity: 0.7 }}>{new Date(reg.createdAt).toLocaleDateString()}</td>
+                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                          <button onClick={() => handleSaveEdit(reg.id)} style={{ background: 'transparent', border: 'none', color: '#4CAF50', cursor: 'pointer', marginRight: '8px' }} title="Save"><Check size={18} /></button>
+                          <button onClick={handleCancelEdit} style={{ background: 'transparent', border: 'none', color: '#f44336', cursor: 'pointer' }} title="Cancel"><X size={18} /></button>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td style={{ padding: '12px' }}>{reg.fullName}</td>
+                        <td style={{ padding: '12px' }}><span className="badge">{reg.batchYear}</span></td>
+                        <td style={{ padding: '12px' }}>{reg.email}</td>
+                        <td style={{ padding: '12px', opacity: 0.7 }}>{new Date(reg.createdAt).toLocaleDateString()}</td>
+                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                          <button onClick={() => handleEditClick(reg)} style={{ background: 'transparent', border: 'none', color: 'var(--gold)', cursor: 'pointer' }} title="Edit"><Edit2 size={18} /></button>
+                        </td>
+                      </>
+                    )}
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>No registrations found matching your filters.</td>
+                    <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>No registrations found matching your filters.</td>
                   </tr>
                 )}
               </tbody>

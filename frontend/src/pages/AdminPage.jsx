@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Search, Filter, Loader2, ArrowLeft, Users, Edit2, Check, X, User } from 'lucide-react';
+import { Search, Filter, Loader2, ArrowLeft, Users, Edit2, Check, X, User, LogOut } from 'lucide-react';
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -12,6 +12,11 @@ const AdminPage = () => {
   const [batchFilter, setBatchFilter] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editFormData, setEditFormData] = useState({ fullName: '', batchYear: '', email: '' });
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    navigate('/');
+  };
 
   useEffect(() => {
     // Simple admin check
@@ -78,39 +83,45 @@ const AdminPage = () => {
 
   return (
     <div className="container" style={{ maxWidth: '1000px' }}>
-      <div className="glass-card" style={{ padding: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-          <Link to="/" style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', opacity: 0.7 }}>
+      <div className="glass-card admin-card">
+        <div className="admin-header">
+          <Link to="/" className="back-link">
             <ArrowLeft size={18} /> Back to Login
           </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <Link to="/profile" style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', opacity: 0.8, fontSize: '0.9rem' }}>
+          <div className="admin-nav-actions">
+            <Link to="/profile" className="profile-link">
               <User size={18} /> My Profile
             </Link>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="admin-title-group">
               <Users size={24} style={{ color: 'var(--gold)' }} />
-              <h2 style={{ margin: 0, background: 'none', color: 'var(--gold)', fontSize: '1.5rem', WebkitTextFillColor: 'initial' }}>Admin Dashboard</h2>
+              <h2 className="admin-title">Admin Dashboard</h2>
             </div>
+            <button 
+              onClick={handleLogout}
+              className="admin-logout-btn"
+            >
+              <LogOut size={16} /> Logout
+            </button>
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', marginBottom: '2rem' }}>
-          <div style={{ position: 'relative' }}>
-            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
+        <div className="admin-controls">
+          <div className="search-container">
+            <Search size={18} className="search-icon" />
             <input 
               type="text" 
               placeholder="Search by name or email..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ paddingLeft: '40px' }}
+              className="search-input"
             />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Filter size={18} style={{ opacity: 0.7 }} />
+          <div className="filter-container">
+            <Filter size={18} className="filter-icon" />
             <select 
               value={batchFilter}
               onChange={(e) => setBatchFilter(e.target.value)}
-              style={{ padding: '0.8rem', borderRadius: '10px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid var(--glass-border)' }}
+              className="batch-select"
             >
               <option value="">All Batches</option>
               {uniqueBatches.map(batch => (
@@ -183,6 +194,98 @@ const AdminPage = () => {
       <div className="footer">"Let's bleed gold!"</div>
       
       <style>{`
+        .admin-card {
+          padding: 2rem;
+        }
+        .admin-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
+          flex-wrap: wrap;
+          gap: 1rem;
+        }
+        .admin-nav-actions {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          flex-wrap: wrap;
+        }
+        .admin-title-group {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .admin-title {
+          margin: 0;
+          color: var(--gold);
+          font-size: 1.5rem;
+        }
+        .back-link {
+          color: white;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          text-decoration: none;
+          opacity: 0.7;
+        }
+        .profile-link {
+          color: white;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          text-decoration: none;
+          opacity: 0.8;
+          font-size: 0.9rem;
+        }
+        .admin-logout-btn {
+          background: rgba(255, 77, 77, 0.1);
+          border: 1px solid #ff4d4d;
+          color: #ff4d4d;
+          padding: 0.4rem 0.8rem;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          font-size: 0.9rem;
+          font-weight: bold;
+          transition: all 0.2s ease;
+        }
+        .admin-logout-btn:hover {
+          background: rgba(255, 77, 77, 0.2);
+        }
+        .admin-controls {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 1rem;
+          margin-bottom: 2rem;
+        }
+        .search-container {
+          position: relative;
+        }
+        .search-icon {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          opacity: 0.5;
+        }
+        .search-input {
+          padding-left: 40px !important;
+        }
+        .filter-container {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .batch-select {
+          padding: 0.8rem;
+          border-radius: 10px;
+          background: rgba(0,0,0,0.2);
+          color: white;
+          border: 1px solid var(--glass-border);
+        }
         .badge {
           background: var(--gold-dark);
           color: var(--maroon);
@@ -197,6 +300,47 @@ const AdminPage = () => {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+          .admin-card {
+            padding: 1.5rem;
+          }
+          .admin-header {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+          .admin-nav-actions {
+            width: 100%;
+            justify-content: space-between;
+            gap: 10px;
+          }
+          .admin-controls {
+            grid-template-columns: 1fr;
+          }
+          .batch-select {
+            width: 100%;
+          }
+          .filter-container {
+            width: 100%;
+          }
+          .admin-title {
+            font-size: 1.2rem;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .admin-nav-actions {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .admin-title-group {
+            order: -1;
+            margin-bottom: 0.5rem;
+          }
+          .admin-logout-btn {
+            justify-content: center;
+          }
         }
       `}</style>
     </div>

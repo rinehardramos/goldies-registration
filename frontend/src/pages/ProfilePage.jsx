@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { User, Lock, Save, ArrowLeft, Loader2, CheckCircle, AlertCircle, ShieldCheck } from 'lucide-react';
+import { User, Lock, Save, ArrowLeft, Loader2, CheckCircle, AlertCircle, ShieldCheck, LogOut } from 'lucide-react';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -27,7 +27,13 @@ const ProfilePage = () => {
     special: false
   });
 
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    navigate('/');
+  };
+
   useEffect(() => {
+    const userStr = localStorage.getItem('user');
     let storedUser = null;
     try {
       storedUser = (userStr && userStr !== 'undefined') ? JSON.parse(userStr) : null;
@@ -146,6 +152,12 @@ const ProfilePage = () => {
             <User size={24} style={{ color: 'var(--gold)' }} />
             <h2 style={{ margin: 0, background: 'none', color: 'var(--gold)', fontSize: '1.5rem', WebkitTextFillColor: 'initial' }}>My Profile</h2>
           </div>
+          <button 
+            onClick={handleLogout}
+            className="logout-btn"
+          >
+            <LogOut size={16} /> Logout
+          </button>
         </div>
 
         {error && (
@@ -162,7 +174,7 @@ const ProfilePage = () => {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+        <div className="profile-grid">
           {/* Profile Details Form */}
           <div>
             <h3 style={{ borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.5rem', marginBottom: '1.5rem' }}>Personal Details</h3>
@@ -227,6 +239,40 @@ const ProfilePage = () => {
       <div className="footer">"Let's bleed gold!"</div>
 
       <style>{`
+        .profile-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 2rem;
+        }
+        .logout-btn {
+          background: rgba(255, 77, 77, 0.1);
+          border: 1px solid #ff4d4d;
+          color: #ff4d4d;
+          padding: 0.4rem 0.8rem;
+          borderRadius: 8px;
+          display: flex;
+          alignItems: center;
+          gap: 8px;
+          cursor: pointer;
+          fontSize: 0.9rem;
+          font-weight: bold;
+          transition: all 0.2s ease;
+          margin-left: 15px;
+        }
+        .logout-btn:hover {
+          background: rgba(255, 77, 77, 0.2);
+        }
+        @media (max-width: 768px) {
+          .profile-grid {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+          }
+          .logout-btn {
+            margin-left: 0;
+            padding: 0.3rem 0.6rem;
+            font-size: 0.85rem;
+          }
+        }
         .animate-spin {
           animation: spin 1s linear infinite;
         }

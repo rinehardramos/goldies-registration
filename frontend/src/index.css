@@ -194,3 +194,61 @@ button:disabled {
 .password-requirements p.valid {
   color: #4BB543;
 }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  h1 {
+    font-size: 2.5rem;
+  }
+
+  .glass-card {
+    padding: 2rem;
+  }
+
+  .container {
+    padding: 1rem;
+    gap: 1.5rem;
+  }
+
+  .countdown {
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .countdown-value {
+    font-size: 2rem;
+  }
+
+  .countdown-label {
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 2rem;
+  }
+
+  .glass-card {
+    padding: 1.5rem;
+    border-radius: 15px;
+  }
+
+  .countdown-value {
+    font-size: 1.5rem;
+  }
+
+  .password-requirements {
+    grid-template-columns: 1fr;
+  }
+
+  button {
+    padding: 0.8rem;
+    font-size: 1rem;
+  }
+
+  input {
+    padding: 0.8rem;
+  }
+}

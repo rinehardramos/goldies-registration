@@ -111,6 +111,17 @@ const RegistrationPage = () => {
         </form>
       </div>
       <div className="footer">"Let's bleed gold!"</div>
+
+      <style>{`
+        @media (max-width: 480px) {
+          h1 {
+            font-size: 1.8rem;
+          }
+          .glass-card {
+            padding: 1.5rem;
+          }
+        }
+      `}</style>
     </div>
   );
 };

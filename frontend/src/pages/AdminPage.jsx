@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Search, Filter, Loader2, ArrowLeft, Users, Edit2, Check, X, User, LogOut } from 'lucide-react';
+import { Search, Filter, Loader2, ArrowLeft, Users, Edit2, Check, X, User, LogOut, Download } from 'lucide-react';
+import * as XLSX from 'xlsx/xlsx.mjs';
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -79,6 +80,22 @@ const AdminPage = () => {
     return matchesSearch && matchesBatch;
   });
 
+  const handleExport = () => {
+    const dataToExport = filteredRegistrations.map(reg => ({
+      'Full Name': reg.fullName,
+      'Batch': reg.batchYear,
+      'Email': reg.email,
+      'Registered On': new Date(reg.createdAt).toLocaleDateString(),
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Registrants');
+
+    const date = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `goldies_registrations_${date}.xlsx`);
+  };
+
   const uniqueBatches = [...new Set(registrations.map(reg => reg.batchYear))].sort();
 
   return (
@@ -129,6 +146,13 @@ const AdminPage = () => {
               ))}
             </select>
           </div>
+          <button 
+            onClick={handleExport}
+            className="export-btn"
+            disabled={filteredRegistrations.length === 0}
+          >
+            <Download size={18} /> Export Excel
+          </button>
         </div>
 
         {loading ? (
@@ -285,6 +309,30 @@ const AdminPage = () => {
           background: rgba(0,0,0,0.2);
           color: white;
           border: 1px solid var(--glass-border);
+        }
+        .export-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: linear-gradient(45deg, #2e7d32, #4caf50);
+          color: white;
+          border: none;
+          padding: 0.8rem 1.2rem;
+          border-radius: 10px;
+          font-weight: bold;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          width: auto;
+          margin-top: 0;
+        }
+        .export-btn:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+          filter: brightness(1.1);
+        }
+        .export-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
         .badge {
           background: var(--gold-dark);

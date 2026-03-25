@@ -55,7 +55,22 @@ const initDb = async (retries = 5) => {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
-      console.log('PostgreSQL Table initialized');
+      
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS attendees (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES registrations(id) ON DELETE CASCADE,
+          full_name TEXT NOT NULL,
+          email TEXT NOT NULL UNIQUE,
+          phone TEXT NOT NULL UNIQUE,
+          batch_year TEXT,
+          address TEXT,
+          is_archived BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('PostgreSQL Tables initialized');
       return;
     } catch (err) {
       console.error(`Error initializing database (${retries} retries left):`, err.message);
@@ -222,7 +237,6 @@ app.post('/api/profile/:id/change-password', async (req, res) => {
   }
 
   try {
-    // 1. Verify current password
     const userResult = await pool.query('SELECT password FROM registrations WHERE id = $1', [id]);
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
@@ -233,7 +247,6 @@ app.post('/api/profile/:id/change-password', async (req, res) => {
       return res.status(401).json({ error: 'Incorrect current password' });
     }
 
-    // 2. Hash and update new password
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
     await pool.query('UPDATE registrations SET password = $1 WHERE id = $2', [hashedNewPassword, id]);
 
@@ -241,6 +254,230 @@ app.post('/api/profile/:id/change-password', async (req, res) => {
   } catch (error) {
     console.error('Change password error:', error);
     res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+// ========== ATTENDEES ENDPOINTS ==========
+
+app.post('/api/attendees', async (req, res) => {
+  const { userId, fullName, email, phone, batchYear, address } = req.body;
+
+  if (!userId || !fullName || !email || !phone) {
+    return res.status(400).json({ error: 'Missing required fields: userId, fullName, email, and phone are required' });
+  }
+
+  try {
+    const query = `
+      INSERT INTO attendees (user_id, full_name, email, phone, batch_year, address)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, full_name as "fullName", email, phone, batch_year as "batchYear", address, is_archived as "isArchived", created_at as "createdAt"
+    `;
+    const values = [userId, fullName, email, phone, batchYear || null, address || null];
+    const result = await pool.query(query, values);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    if (error.code === '23505') {
+      if (error.constraint === 'attendees_email_key') {
+        return res.status(400).json({ error: 'Email already registered as an attendee' });
+      }
+      if (error.constraint === 'attendees_phone_key') {
+        return res.status(400).json({ error: 'Phone number already registered as an attendee' });
+      }
+    }
+    console.error('Create attendee error:', error);
+    res.status(500).json({ error: 'Failed to create attendee' });
+  }
+});
+
+app.get('/api/attendees', async (req, res) => {
+  const { userId } = req.query;
+
+  if (!userId) {
+    return res.status(400).json({ error: 'userId is required' });
+  }
+
+  try {
+    const query = `
+      SELECT id, full_name as "fullName", email, phone, batch_year as "batchYear", address, is_archived as "isArchived", created_at as "createdAt"
+      FROM attendees
+      WHERE user_id = $1 AND is_archived = FALSE
+      ORDER BY created_at DESC
+    `;
+    const result = await pool.query(query, [userId]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Fetch attendees error:', error);
+    res.status(500).json({ error: 'Failed to fetch attendees' });
+  }
+});
+
+app.get('/api/attendees/:id', async (req, res) => {
+  const { id } = req.params;
+  const { userId } = req.query;
+
+  try {
+    const query = `
+      SELECT id, user_id as "userId", full_name as "fullName", email, phone, batch_year as "batchYear", address, is_archived as "isArchived", created_at as "createdAt"
+      FROM attendees
+      WHERE id = $1
+    `;
+    const result = await pool.query(query, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Attendee not found' });
+    }
+
+    const attendee = result.rows[0];
+    if (userId && attendee.userId !== parseInt(userId)) {
+      return res.status(403).json({ error: 'Not authorized to view this attendee' });
+    }
+
+    res.json(attendee);
+  } catch (error) {
+    console.error('Fetch attendee error:', error);
+    res.status(500).json({ error: 'Failed to fetch attendee' });
+  }
+});
+
+app.put('/api/attendees/:id', async (req, res) => {
+  const { id } = req.params;
+  const { fullName, email, phone, batchYear, address } = req.body;
+
+  if (!fullName || !email || !phone) {
+    return res.status(400).json({ error: 'Missing required fields: fullName, email, and phone are required' });
+  }
+
+  try {
+    const query = `
+      UPDATE attendees
+      SET full_name = $1, email = $2, phone = $3, batch_year = $4, address = $5, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $6 AND is_archived = FALSE
+      RETURNING id, full_name as "fullName", email, phone, batch_year as "batchYear", address, is_archived as "isArchived", created_at as "createdAt"
+    `;
+    const values = [fullName, email, phone, batchYear || null, address || null, id];
+    const result = await pool.query(query, values);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Attendee not found or archived' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    if (error.code === '23505') {
+      if (error.constraint === 'attendees_email_key') {
+        return res.status(400).json({ error: 'Email already registered as an attendee' });
+      }
+      if (error.constraint === 'attendees_phone_key') {
+        return res.status(400).json({ error: 'Phone number already registered as an attendee' });
+      }
+    }
+    console.error('Update attendee error:', error);
+    res.status(500).json({ error: 'Failed to update attendee' });
+  }
+});
+
+app.delete('/api/attendees/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const query = `
+      UPDATE attendees
+      SET is_archived = TRUE, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND is_archived = FALSE
+      RETURNING id
+    `;
+    const result = await pool.query(query, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Attendee not found or already archived' });
+    }
+    
+    res.json({ message: 'Attendee archived successfully' });
+  } catch (error) {
+    console.error('Archive attendee error:', error);
+    res.status(500).json({ error: 'Failed to archive attendee' });
+  }
+});
+
+// ========== ADMIN ATTENDEES ENDPOINTS ==========
+
+app.get('/api/admin/attendees', async (req, res) => {
+  const { includeArchived } = req.query;
+
+  try {
+    const query = `
+      SELECT a.id, a.user_id as "userId", a.full_name as "fullName", a.email, a.phone, a.batch_year as "batchYear", a.address, a.is_archived as "isArchived", a.created_at as "createdAt",
+             r.full_name as "ownerName", r.email as "ownerEmail"
+      FROM attendees a
+      LEFT JOIN registrations r ON a.user_id = r.id
+      ${includeArchived === 'true' ? '' : 'WHERE a.is_archived = FALSE'}
+      ORDER BY a.created_at DESC
+    `;
+    const result = await pool.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Fetch admin attendees error:', error);
+    res.status(500).json({ error: 'Failed to fetch attendees' });
+  }
+});
+
+app.put('/api/admin/attendees/:id', async (req, res) => {
+  const { id } = req.params;
+  const { fullName, email, phone, batchYear, address } = req.body;
+
+  if (!fullName || !email || !phone) {
+    return res.status(400).json({ error: 'Missing required fields: fullName, email, and phone are required' });
+  }
+
+  try {
+    const query = `
+      UPDATE attendees
+      SET full_name = $1, email = $2, phone = $3, batch_year = $4, address = $5, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $6
+      RETURNING id, full_name as "fullName", email, phone, batch_year as "batchYear", address, is_archived as "isArchived", created_at as "createdAt"
+    `;
+    const values = [fullName, email, phone, batchYear || null, address || null, id];
+    const result = await pool.query(query, values);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Attendee not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    if (error.code === '23505') {
+      if (error.constraint === 'attendees_email_key') {
+        return res.status(400).json({ error: 'Email already registered as an attendee' });
+      }
+      if (error.constraint === 'attendees_phone_key') {
+        return res.status(400).json({ error: 'Phone number already registered as an attendee' });
+      }
+    }
+    console.error('Admin update attendee error:', error);
+    res.status(500).json({ error: 'Failed to update attendee' });
+  }
+});
+
+app.delete('/api/admin/attendees/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const query = `
+      UPDATE attendees
+      SET is_archived = TRUE, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING id
+    `;
+    const result = await pool.query(query, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Attendee not found' });
+    }
+    
+    res.json({ message: 'Attendee archived successfully' });
+  } catch (error) {
+    console.error('Admin archive attendee error:', error);
+    res.status(500).json({ error: 'Failed to archive attendee' });
   }
 });
 

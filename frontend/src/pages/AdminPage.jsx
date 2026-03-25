@@ -1,26 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Search, Filter, Loader2, ArrowLeft, Users, Edit2, Check, X, User, LogOut, Download } from 'lucide-react';
+import { Search, Filter, Loader2, ArrowLeft, Users, Edit2, Check, X, User, LogOut, Download, UserPlus, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx/xlsx.mjs';
 
 const AdminPage = () => {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('registrations');
   const [registrations, setRegistrations] = useState([]);
+  const [attendees, setAttendees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [batchFilter, setBatchFilter] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editFormData, setEditFormData] = useState({ fullName: '', batchYear: '', email: '' });
+  const [editingAttendeeId, setEditingAttendeeId] = useState(null);
+  const [editAttendeeData, setEditAttendeeData] = useState({ fullName: '', email: '', phone: '', batchYear: '', address: '' });
 
   const handleLogout = () => {
     localStorage.removeItem('user');
     navigate('/');
   };
 
+  const getApiUrl = () => {
+    let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+    if (!apiUrl.startsWith('http')) apiUrl = `https://${apiUrl}`;
+    return apiUrl;
+  };
+
   useEffect(() => {
-    // Simple admin check
     const userStr = localStorage.getItem('user');
     if (!userStr) {
       navigate('/');
@@ -33,20 +42,27 @@ const AdminPage = () => {
     }
 
     fetchRegistrations();
+    fetchAttendees();
   }, [navigate]);
 
   const fetchRegistrations = async () => {
     try {
       setLoading(true);
-      let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-      if (!apiUrl.startsWith('http')) apiUrl = `https://${apiUrl}`;
-      
-      const response = await axios.get(`${apiUrl}/api/registrations`);
+      const response = await axios.get(`${getApiUrl()}/api/registrations`);
       setRegistrations(response.rows || response.data || []);
       setLoading(false);
     } catch (err) {
       setError('Failed to load registrations');
       setLoading(false);
+    }
+  };
+
+  const fetchAttendees = async () => {
+    try {
+      const response = await axios.get(`${getApiUrl()}/api/admin/attendees?includeArchived=false`);
+      setAttendees(response.data || []);
+    } catch (err) {
+      console.error('Failed to load attendees:', err);
     }
   };
 
@@ -61,15 +77,46 @@ const AdminPage = () => {
 
   const handleSaveEdit = async (id) => {
     try {
-      let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-      if (!apiUrl.startsWith('http')) apiUrl = `https://${apiUrl}`;
-      
-      await axios.put(`${apiUrl}/api/registrations/${id}`, editFormData);
-      
+      await axios.put(`${getApiUrl()}/api/registrations/${id}`, editFormData);
       setRegistrations(registrations.map(reg => reg.id === id ? { ...reg, ...editFormData } : reg));
       setEditingId(null);
     } catch (err) {
       alert('Failed to update registration');
+    }
+  };
+
+  const handleEditAttendeeClick = (attendee) => {
+    setEditingAttendeeId(attendee.id);
+    setEditAttendeeData({
+      fullName: attendee.fullName,
+      email: attendee.email,
+      phone: attendee.phone,
+      batchYear: attendee.batchYear || '',
+      address: attendee.address || ''
+    });
+  };
+
+  const handleCancelAttendeeEdit = () => {
+    setEditingAttendeeId(null);
+  };
+
+  const handleSaveAttendeeEdit = async (id) => {
+    try {
+      const response = await axios.put(`${getApiUrl()}/api/admin/attendees/${id}`, editAttendeeData);
+      setAttendees(attendees.map(a => a.id === id ? response.data : a));
+      setEditingAttendeeId(null);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to update attendee');
+    }
+  };
+
+  const handleArchiveAttendee = async (id) => {
+    if (!window.confirm('Are you sure you want to archive this attendee?')) return;
+    try {
+      await axios.delete(`${getApiUrl()}/api/admin/attendees/${id}`);
+      setAttendees(attendees.filter(a => a.id !== id));
+    } catch (err) {
+      alert('Failed to archive attendee');
     }
   };
 
@@ -80,7 +127,15 @@ const AdminPage = () => {
     return matchesSearch && matchesBatch;
   });
 
-  const handleExport = () => {
+  const filteredAttendees = attendees.filter(attendee => {
+    const matchesSearch = attendee.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          attendee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          attendee.phone.includes(searchTerm);
+    const matchesBatch = batchFilter === '' || (attendee.batchYear && attendee.batchYear.toString() === batchFilter);
+    return matchesSearch && matchesBatch;
+  });
+
+  const handleExportRegistrations = () => {
     const dataToExport = filteredRegistrations.map(reg => ({
       'Full Name': reg.fullName,
       'Batch': reg.batchYear,
@@ -96,7 +151,28 @@ const AdminPage = () => {
     XLSX.writeFile(wb, `goldies_registrations_${date}.xlsx`);
   };
 
+  const handleExportAttendees = () => {
+    const dataToExport = filteredAttendees.map(a => ({
+      'Full Name': a.fullName,
+      'Email': a.email,
+      'Phone': a.phone,
+      'Batch Year': a.batchYear || '',
+      'Address': a.address || '',
+      'Registered By': a.ownerName || '',
+      'Registered On': new Date(a.createdAt).toLocaleDateString(),
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Attendees');
+
+    const date = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `goldies_attendees_${date}.xlsx`);
+  };
+
   const uniqueBatches = [...new Set(registrations.map(reg => reg.batchYear))].sort();
+  const uniqueAttendeeBatches = [...new Set(attendees.filter(a => a.batchYear).map(a => a.batchYear))].sort();
+  const allBatches = [...new Set([...uniqueBatches, ...uniqueAttendeeBatches])].sort();
 
   return (
     <div className="container" style={{ maxWidth: '1000px' }}>
@@ -113,13 +189,25 @@ const AdminPage = () => {
               <Users size={24} style={{ color: 'var(--gold)' }} />
               <h2 className="admin-title">Admin Dashboard</h2>
             </div>
-            <button 
-              onClick={handleLogout}
-              className="admin-logout-btn"
-            >
+            <button onClick={handleLogout} className="admin-logout-btn">
               <LogOut size={16} /> Logout
             </button>
           </div>
+        </div>
+
+        <div className="tab-container">
+          <button 
+            className={`tab-btn ${activeTab === 'registrations' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('registrations'); setSearchTerm(''); setBatchFilter(''); }}
+          >
+            <Users size={16} /> Users ({registrations.length})
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === 'attendees' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('attendees'); setSearchTerm(''); setBatchFilter(''); }}
+          >
+            <UserPlus size={16} /> Attendees ({attendees.length})
+          </button>
         </div>
 
         <div className="admin-controls">
@@ -127,7 +215,7 @@ const AdminPage = () => {
             <Search size={18} className="search-icon" />
             <input 
               type="text" 
-              placeholder="Search by name or email..." 
+              placeholder={activeTab === 'registrations' ? "Search by name or email..." : "Search by name, email, or phone..."} 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
@@ -141,15 +229,15 @@ const AdminPage = () => {
               className="batch-select"
             >
               <option value="">All Batches</option>
-              {uniqueBatches.map(batch => (
+              {allBatches.map(batch => (
                 <option key={batch} value={batch}>{batch}</option>
               ))}
             </select>
           </div>
           <button 
-            onClick={handleExport}
+            onClick={activeTab === 'registrations' ? handleExportRegistrations : handleExportAttendees}
             className="export-btn"
-            disabled={filteredRegistrations.length === 0}
+            disabled={activeTab === 'registrations' ? filteredRegistrations.length === 0 : filteredAttendees.length === 0}
           >
             <Download size={18} /> Export Excel
           </button>
@@ -161,7 +249,7 @@ const AdminPage = () => {
           </div>
         ) : error ? (
           <div style={{ textAlign: 'center', padding: '2rem', color: '#ff4d4d' }}>{error}</div>
-        ) : (
+        ) : activeTab === 'registrations' ? (
           <div className="table-responsive" style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', color: 'white' }}>
               <thead>
@@ -213,6 +301,64 @@ const AdminPage = () => {
               </tbody>
             </table>
           </div>
+        ) : (
+          <div className="table-responsive" style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', color: 'white' }}>
+              <thead>
+                <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--glass-border)' }}>
+                  <th style={{ padding: '12px' }}>Full Name</th>
+                  <th style={{ padding: '12px' }}>Email</th>
+                  <th style={{ padding: '12px' }}>Phone</th>
+                  <th style={{ padding: '12px' }}>Batch</th>
+                  <th style={{ padding: '12px' }}>Registered By</th>
+                  <th style={{ padding: '12px', textAlign: 'center' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAttendees.length > 0 ? filteredAttendees.map((attendee) => (
+                  <tr key={attendee.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    {editingAttendeeId === attendee.id ? (
+                      <>
+                        <td style={{ padding: '12px' }}>
+                          <input type="text" value={editAttendeeData.fullName} onChange={e => setEditAttendeeData({...editAttendeeData, fullName: e.target.value})} style={{ width: '100%', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+                        </td>
+                        <td style={{ padding: '12px' }}>
+                          <input type="email" value={editAttendeeData.email} onChange={e => setEditAttendeeData({...editAttendeeData, email: e.target.value})} style={{ width: '100%', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+                        </td>
+                        <td style={{ padding: '12px' }}>
+                          <input type="tel" value={editAttendeeData.phone} onChange={e => setEditAttendeeData({...editAttendeeData, phone: e.target.value})} style={{ width: '100%', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+                        </td>
+                        <td style={{ padding: '12px' }}>
+                          <input type="text" value={editAttendeeData.batchYear} onChange={e => setEditAttendeeData({...editAttendeeData, batchYear: e.target.value})} style={{ width: '80px', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.3)', color: 'white' }} />
+                        </td>
+                        <td style={{ padding: '12px', opacity: 0.7 }}>{attendee.ownerName || '-'}</td>
+                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                          <button onClick={() => handleSaveAttendeeEdit(attendee.id)} style={{ background: 'transparent', border: 'none', color: '#4CAF50', cursor: 'pointer', marginRight: '8px' }} title="Save"><Check size={18} /></button>
+                          <button onClick={handleCancelAttendeeEdit} style={{ background: 'transparent', border: 'none', color: '#f44336', cursor: 'pointer' }} title="Cancel"><X size={18} /></button>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td style={{ padding: '12px' }}>{attendee.fullName}</td>
+                        <td style={{ padding: '12px' }}>{attendee.email}</td>
+                        <td style={{ padding: '12px' }}>{attendee.phone}</td>
+                        <td style={{ padding: '12px' }}>{attendee.batchYear ? <span className="badge">{attendee.batchYear}</span> : '-'}</td>
+                        <td style={{ padding: '12px', opacity: 0.7 }}>{attendee.ownerName || '-'}</td>
+                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                          <button onClick={() => handleEditAttendeeClick(attendee)} style={{ background: 'transparent', border: 'none', color: 'var(--gold)', cursor: 'pointer', marginRight: '8px' }} title="Edit"><Edit2 size={18} /></button>
+                          <button onClick={() => handleArchiveAttendee(attendee.id)} style={{ background: 'transparent', border: 'none', color: '#ff4d4d', cursor: 'pointer' }} title="Archive"><Trash2 size={18} /></button>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}>No attendees found matching your filters.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
       <div className="footer">"Let's bleed gold!"</div>
@@ -225,7 +371,7 @@ const AdminPage = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 2rem;
+          margin-bottom: 1.5rem;
           flex-wrap: wrap;
           gap: 1rem;
         }
@@ -278,6 +424,32 @@ const AdminPage = () => {
         }
         .admin-logout-btn:hover {
           background: rgba(255, 77, 77, 0.2);
+        }
+        .tab-container {
+          display: flex;
+          gap: 10px;
+          margin-bottom: 1.5rem;
+        }
+        .tab-btn {
+          background: rgba(255,255,255,0.05);
+          border: 1px solid var(--glass-border);
+          color: white;
+          padding: 0.6rem 1.2rem;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          font-size: 0.9rem;
+          transition: all 0.2s ease;
+        }
+        .tab-btn:hover {
+          background: rgba(255,255,255,0.1);
+        }
+        .tab-btn.active {
+          background: linear-gradient(45deg, var(--maroon), #8b0000);
+          border-color: var(--gold);
+          color: var(--gold);
         }
         .admin-controls {
           display: grid;
@@ -374,6 +546,13 @@ const AdminPage = () => {
           }
           .admin-title {
             font-size: 1.2rem;
+          }
+          .tab-container {
+            flex-wrap: wrap;
+          }
+          .tab-btn {
+            flex: 1;
+            justify-content: center;
           }
         }
 

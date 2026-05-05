@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { Edit2, Check, X, Download } from 'lucide-react';
+import { Edit2, Check, X, Download, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -13,6 +13,7 @@ const RegistrantsTab = () => {
   const [batchFilter, setBatchFilter] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ firstName: '', lastName: '', email: '', batchYear: '' });
+  const [resendingId, setResendingId] = useState(null);
 
   useEffect(() => {
     fetchRegistrations();
@@ -37,6 +38,18 @@ const RegistrantsTab = () => {
   };
 
   const cancelEdit = () => setEditingId(null);
+
+  const handleResendConfirmation = async (id) => {
+    setResendingId(id);
+    try {
+      await api.post(`/api/admin/registrations/${id}/resend-confirmation`);
+      toast.success('Confirmation email resent');
+    } catch {
+      toast.error('Failed to resend confirmation email');
+    } finally {
+      setResendingId(null);
+    }
+  };
 
   const saveEdit = async (id) => {
     try {
@@ -131,7 +144,7 @@ const RegistrantsTab = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
-                {['First Name', 'Last Name', 'Email', 'Batch Year', 'Registered On', ''].map(h => (
+                {['First Name', 'Last Name', 'Email', 'Batch Year', 'Registered On', 'Actions'].map(h => (
                   <th key={h} style={{ padding: 'var(--space-3)', textAlign: 'left', color: 'var(--color-text-muted)', fontWeight: 600 }}>{h}</th>
                 ))}
               </tr>
@@ -180,9 +193,17 @@ const RegistrantsTab = () => {
                       <td style={{ padding: 'var(--space-3)', color: 'var(--color-text-muted)' }}>
                         {reg.createdAt ? new Date(reg.createdAt).toLocaleDateString() : '-'}
                       </td>
-                      <td style={{ padding: 'var(--space-3)' }}>
+                      <td style={{ padding: 'var(--space-3)', whiteSpace: 'nowrap', display: 'flex', gap: 8, alignItems: 'center' }}>
                         <button onClick={() => startEdit(reg)} style={{ background: 'none', border: 'none', color: 'var(--color-maroon)', cursor: 'pointer' }} title="Edit">
                           <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleResendConfirmation(reg.id)}
+                          disabled={resendingId === reg.id}
+                          style={{ background: 'none', border: 'none', color: 'var(--color-gold)', cursor: 'pointer' }}
+                          title="Resend confirmation email"
+                        >
+                          <RefreshCw size={15} style={resendingId === reg.id ? { animation: 'spin 1s linear infinite' } : {}} />
                         </button>
                       </td>
                     </>

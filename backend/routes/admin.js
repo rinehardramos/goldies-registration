@@ -98,6 +98,41 @@ router.put('/registrations/:id', async (req, res) => {
   }
 });
 
+// POST /api/admin/registrations/:id/resend-confirmation
+router.post('/registrations/:id/resend-confirmation', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT first_name, last_name, email, batch_year, qr_token
+       FROM registrations WHERE id = $1`,
+      [id],
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Registration not found' });
+
+    const { first_name, last_name, email, batch_year, qr_token } = rows[0];
+
+    const { sendConfirmationEmail } = require('../services/email');
+    const result = await sendConfirmationEmail(email, {
+      firstName: first_name,
+      lastName:  last_name,
+      batchYear: batch_year,
+      qrToken:   qr_token,
+    });
+
+    if (result?.error) {
+      console.error('Resend confirmation rejected:', JSON.stringify(result.error));
+      return res.status(502).json({ error: 'Email provider rejected the request' });
+    }
+
+    console.log('Confirmation email resent to', email, 'id:', result?.data?.id ?? result?.id);
+    res.json({ message: 'Confirmation email resent' });
+  } catch (err) {
+    console.error('Resend confirmation error:', err.message);
+    res.status(500).json({ error: 'Failed to resend confirmation email' });
+  }
+});
+
 // ── Attendees ─────────────────────────────────────────────────────────────────
 
 // GET /api/admin/attendees

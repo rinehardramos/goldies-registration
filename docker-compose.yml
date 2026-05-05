@@ -7,7 +7,7 @@ services:
       - POSTGRES_PASSWORD=goldiepassword
       - POSTGRES_DB=goldies_registration
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -21,6 +21,12 @@ services:
     environment:
       - PORT=5001
       - DATABASE_URL=postgres://goldie:goldiepassword@db:5432/goldies_registration
+      - JWT_SECRET=goldies-jwt-dev-secret-2026
+      - JWT_REFRESH_SECRET=goldies-jwt-refresh-dev-secret-2026
+      - RESEND_API_KEY=${RESEND_API_KEY:-re_placeholder}
+      - APP_URL=http://localhost:5180
+      - ADMIN_EMAIL=admin@goldies.com
+      - ADMIN_PASSWORD=AdminPass123!
     depends_on:
       - db
 

@@ -1,65 +1,71 @@
-"use strict";
-const express    = require("express");
-const pool       = require("../db");
-const qrService  = require("../services/qr");
-const { requireAuth } = require("../middleware/auth");
+'use strict';
+const express = require('express');
+const pool    = require('../db');
 
 const router = express.Router();
 
-// GET /api/qr/:token  – return QR code image (PNG) for a valid invitation token
-router.get("/:token", requireAuth, async (req, res) => {
+// GET /api/qr/:token  – public endpoint for QR code scan
+// Returns type: 'register' | 'already_registered' | 'checkin'
+router.get('/:token', async (req, res) => {
   const { token } = req.params;
 
   try {
-    const { rows } = await pool.query(
-      "SELECT i.*, a.email as attendee_email, a.user_id FROM invitations i JOIN attendees a ON i.attendee_id = a.id WHERE i.token = $1",
+    // Get event date from settings
+    const { rows: settingsRows } = await pool.query(
+      `SELECT value FROM settings WHERE key = 'event_date'`,
+    );
+    const eventDate = settingsRows.length ? new Date(settingsRows[0].value) : null;
+    const now = new Date();
+    const isEventDay = eventDate ? now >= eventDate : false;
+
+    // Check registrations table first (registered user's personal QR)
+    const { rows: regRows } = await pool.query(
+      `SELECT id, first_name, last_name, batch_year, email FROM registrations WHERE qr_token = $1`,
       [token],
     );
-
-    if (!rows.length) {
-      return res.status(404).json({ error: "Invitation not found" });
+    if (regRows.length) {
+      const user = regRows[0];
+      if (isEventDay) {
+        return res.json({
+          type: 'checkin',
+          id: user.id,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          batchYear: user.batch_year,
+          email: user.email,
+        });
+      }
+      return res.json({
+        type: 'already_registered',
+        firstName: user.first_name,
+        lastName: user.last_name,
+        batchYear: user.batch_year,
+      });
     }
 
-    const invitation = rows[0];
-
-    // Only the owner or an admin may download the QR
-    if (!req.user.isAdmin && invitation.user_id !== req.user.id) {
-      return res.status(403).json({ error: "Not authorized" });
-    }
-
-    const checkInUrl = (process.env.APP_BASE_URL || "http://localhost:5001") + "/api/checkin/" + token;
-    const buffer     = await qrService.generateBuffer(checkInUrl);
-
-    res.set("Content-Type", "image/png");
-    res.send(buffer);
-  } catch (err) {
-    console.error("QR generate error:", err);
-    res.status(500).json({ error: "Failed to generate QR code" });
-  }
-});
-
-// GET /api/qr/:token/data-url  – return QR code as JSON { dataUrl }
-router.get("/:token/data-url", requireAuth, async (req, res) => {
-  const { token } = req.params;
-
-  try {
-    const { rows } = await pool.query(
-      "SELECT i.qr_url, a.user_id FROM invitations i JOIN attendees a ON i.attendee_id = a.id WHERE i.token = $1",
+    // Check invitations table
+    const { rows: invRows } = await pool.query(
+      `SELECT id, email, status FROM invitations WHERE qr_token = $1`,
       [token],
     );
+    if (invRows.length) {
+      const inv = invRows[0];
 
-    if (!rows.length) {
-      return res.status(404).json({ error: "Invitation not found" });
+      if (inv.status === 'registered') {
+        return res.json({ type: 'already_registered', email: inv.email });
+      }
+
+      if (isEventDay) {
+        return res.json({ type: 'checkin', email: inv.email, invitationId: inv.id });
+      }
+
+      return res.json({ type: 'register', email: inv.email, token });
     }
 
-    if (!req.user.isAdmin && rows[0].user_id !== req.user.id) {
-      return res.status(403).json({ error: "Not authorized" });
-    }
-
-    res.json({ dataUrl: rows[0].qr_url });
+    return res.status(404).json({ error: 'Invalid QR token' });
   } catch (err) {
-    console.error("QR data-url error:", err);
-    res.status(500).json({ error: "Failed to retrieve QR data" });
+    console.error('QR lookup error:', err);
+    res.status(500).json({ error: 'Failed to look up QR token' });
   }
 });
 

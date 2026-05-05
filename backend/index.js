@@ -35,7 +35,12 @@ app.use(morgan('dev'));
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
 // ── Routes ───────────────────────────────────────────────────────────────────
-app.use('/api/auth',        require('./routes/auth'));
+const authRouter = require('./routes/auth');
+
+// /api/login  – top-level login endpoint the frontend uses
+app.post('/api/login', authRouter.loginHandler);
+
+app.use('/api/auth',        authRouter);
 app.use('/api/invitations', require('./routes/invitations'));
 app.use('/api/qr',          require('./routes/qr'));
 app.use('/api/checkin',     require('./routes/checkin'));

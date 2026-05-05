@@ -1,7 +1,8 @@
 'use strict';
 const { Resend } = require('resend');
-const path = require('path');
-const fs   = require('fs');
+const path   = require('path');
+const fs     = require('fs');
+const QRCode = require('qrcode');
 
 const resend   = new Resend(process.env.RESEND_API_KEY);
 const FROM     = process.env.FROM_EMAIL || 'noreply@goldies2026.com';
@@ -51,11 +52,27 @@ const sendInvitationEmail = async (email, qrToken) => {
  * @param {{ firstName: string, lastName: string, batchYear: string, qrToken: string }} data
  */
 const sendConfirmationEmail = async (email, { firstName, lastName, batchYear, qrToken }) => {
-  const html = tryRenderTemplate('confirmation', { firstName, lastName, batchYear, qrToken, year: new Date().getFullYear() })
-    || `<p>Hi ${firstName},</p>
-        <p>You are now registered for the Golden Years Reunion 2026!</p>
-        <p>Batch year: ${batchYear}</p>
-        <p>Your QR token: ${qrToken}</p>`;
+  const qrPageUrl  = `${BASE_URL}/qr/${qrToken}`;
+  const profileUrl = `${BASE_URL}/profile`;
+
+  let qrDataURL = '';
+  try {
+    qrDataURL = await QRCode.toDataURL(qrPageUrl, {
+      width: 180,
+      margin: 2,
+      color: { dark: '#800000', light: '#FFFFFF' },
+    });
+  } catch (_) {}
+
+  const html = tryRenderTemplate('confirmation', {
+    firstName, lastName, batchYear, qrToken,
+    qrDataURL, qrPageUrl, profileUrl,
+    year: new Date().getFullYear(),
+  }) || `<p>Hi ${firstName},</p>
+         <p>You are now registered for the Golden Years Reunion ${new Date().getFullYear()}!</p>
+         <p>Batch year: ${batchYear}</p>
+         <p><a href="${profileUrl}">View / Update My Profile</a></p>
+         <p><a href="${qrPageUrl}">Open My QR Page</a></p>`;
 
   return resend.emails.send({
     from:    FROM,

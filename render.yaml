@@ -7,7 +7,6 @@ services:
     name: goldies-backend
     env: node
     plan: free
-    autoDeploy: yes
     buildCommand: npm install
     startCommand: node index.js
     rootDir: backend
@@ -34,7 +33,6 @@ services:
   - type: web
     name: goldies2026
     env: static
-    autoDeploy: yes
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist

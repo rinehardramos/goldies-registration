@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Reunion Invitation</title>
+  <style>
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+    .wrapper {
+      max-width: 600px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,.12);
+    }
+    .header {
+      background: #c8a045;
+      color: #fff;
+      text-align: center;
+      padding: 32px 24px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 1px;
+    }
+    .body {
+      padding: 32px 40px;
+      color: #333;
+      line-height: 1.6;
+    }
+    .qr-block {
+      text-align: center;
+      margin: 32px 0;
+    }
+    .qr-block img {
+      width: 200px;
+      height: 200px;
+      border: 6px solid #c8a045;
+      border-radius: 4px;
+    }
+    .cta {
+      display: block;
+      width: fit-content;
+      margin: 0 auto 24px;
+      padding: 14px 32px;
+      background: #c8a045;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .footer {
+      background: #f0f0f0;
+      text-align: center;
+      padding: 16px;
+      font-size: 12px;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <h1>Golden Years Reunion {{year}}</h1>
+    </div>
+    <div class="body">
+      <p>Dear <strong>{{attendeeName}}</strong>,</p>
+      <p>
+        You are cordially invited to the Golden Years Reunion!
+        Please present the QR code below at the registration desk upon arrival.
+      </p>
+
+      <div class="qr-block">
+        <img src="{{qrDataURL}}" alt="Your QR Code" />
+        <p style="font-size:13px;color:#666;margin-top:8px;">
+          Scan this code at the event entrance.
+        </p>
+      </div>
+
+      <p>
+        If your device cannot display the QR code, use the button below to check in:
+      </p>
+      <a class="cta" href="{{checkInUrl}}">Check In Online</a>
+
+      <p>We look forward to seeing you!</p>
+      <p>Warm regards,<br /><strong>The Reunion Committee</strong></p>
+    </div>
+    <div class="footer">
+      &copy; {{year}} Golden Years Reunion. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>

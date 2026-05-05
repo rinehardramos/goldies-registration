@@ -106,14 +106,20 @@ router.post('/register', async (req, res) => {
     // Send confirmation email (non-blocking)
     try {
       const { sendConfirmationEmail } = require('../services/email');
-      sendConfirmationEmail(email, {
+      sendConfirmationEmail(email.trim().toLowerCase(), {
         firstName,
         lastName,
         batchYear,
         qrToken: user.qr_token,
-      }).catch(err => console.error('Confirmation email failed:', err.message));
-    } catch (_) {
-      // email service may not be configured – ignore
+      }).then(result => {
+        if (result?.error) {
+          console.error('Confirmation email rejected by Resend:', JSON.stringify(result.error));
+        } else {
+          console.log('Confirmation email sent, id:', result?.data?.id ?? result?.id);
+        }
+      }).catch(err => console.error('Confirmation email failed:', err.message, err.statusCode ?? ''));
+    } catch (err) {
+      console.error('Confirmation email service error:', err.message);
     }
 
     const payload = { id: user.id, email: user.email, isAdmin: user.is_admin };

@@ -1,554 +1,660 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
-import { User, Lock, Save, ArrowLeft, Loader2, CheckCircle, AlertCircle, ShieldCheck, LogOut, Users, Plus, Edit2, Trash2, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
+import QRCode from 'qrcode';
+import {
+  User, Lock, QrCode, Users, Mail, LogOut, Plus, Edit2, Trash2, X, Save,
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
+import PageContainer from '../components/layout/PageContainer';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
 
-const ProfilePage = () => {
-  const navigate = useNavigate();
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  
-  const [fullName, setFullName] = useState('');
-  const [batchYear, setBatchYear] = useState('');
-  const [email, setEmail] = useState('');
-  
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordStatus, setPasswordStatus] = useState('idle');
-  const [validations, setValidations] = useState({
-    length: false,
-    uppercase: false,
-    number: false,
-    special: false
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+const BATCH_YEARS = Array.from({ length: 51 }, (_, i) => String(2020 - i));
+
+const sectionHeaderStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  marginBottom: '20px',
+  paddingBottom: '12px',
+  borderBottom: '1px solid var(--color-border)',
+};
+
+const formStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '16px',
+};
+
+const twoColStyle = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  gap: '16px',
+};
+
+// ─── Personal Details Section ────────────────────────────────────────────────
+
+function PersonalDetailsSection({ profile, onSaved }) {
+  const [form, setForm] = useState({
+    firstName: profile?.firstName || '',
+    lastName: profile?.lastName || '',
+    email: profile?.email || '',
+    batchYear: profile?.batchYear || '',
   });
-
-  const [attendees, setAttendees] = useState([]);
-  const [attendeesLoading, setAttendeesLoading] = useState(false);
-  const [showAttendeeForm, setShowAttendeeForm] = useState(false);
-  const [editingAttendee, setEditingAttendee] = useState(null);
-  const [attendeeForm, setAttendeeForm] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    batchYear: '',
-    address: ''
-  });
-  const [attendeeError, setAttendeeError] = useState('');
-
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    navigate('/');
-  };
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    let storedUser = null;
-    try {
-      storedUser = (userStr && userStr !== 'undefined') ? JSON.parse(userStr) : null;
-    } catch (e) {
-      console.error('Failed to parse user from localStorage', e);
-      localStorage.removeItem('user');
-      navigate('/');
-      return;
+    if (profile) {
+      setForm({
+        firstName: profile.firstName || '',
+        lastName: profile.lastName || '',
+        email: profile.email || '',
+        batchYear: profile.batchYear || '',
+      });
     }
+  }, [profile]);
 
-    if (!storedUser) {
-      navigate('/');
-      return;
-    }
-    setUser(storedUser);
-    fetchProfile(storedUser.id);
-    fetchAttendees(storedUser.id);
-  }, [navigate]);
-
-  const getApiUrl = () => {
-    let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-    if (!apiUrl.startsWith('http')) apiUrl = `https://${apiUrl}`;
-    return apiUrl;
-  };
-
-  const fetchProfile = async (id) => {
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
     try {
-      setLoading(true);
-      const response = await axios.get(`${getApiUrl()}/api/profile/${id}`);
-      const data = response.data;
-      setFullName(data.fullName);
-      setBatchYear(data.batchYear);
-      setEmail(data.email);
-      setLoading(false);
+      const { data } = await api.put('/api/profile', form);
+      toast.success('Profile updated');
+      onSaved(data.user || data);
     } catch (err) {
-      setError('Failed to load profile details');
-      setLoading(false);
+      toast.error(err.response?.data?.error || 'Failed to update profile');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const fetchAttendees = async (userId) => {
-    try {
-      setAttendeesLoading(true);
-      const response = await axios.get(`${getApiUrl()}/api/attendees?userId=${userId}`);
-      setAttendees(response.data);
-      setAttendeesLoading(false);
-    } catch (err) {
-      setAttendeesLoading(false);
-    }
-  };
+  return (
+    <Card>
+      <div style={sectionHeaderStyle}>
+        <User size={20} style={{ color: 'var(--color-maroon)' }} />
+        <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700 }}>Personal Details</h3>
+      </div>
+      <form onSubmit={handleSave} style={formStyle}>
+        <div style={twoColStyle}>
+          <Input
+            label="First Name"
+            value={form.firstName}
+            onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+            required
+          />
+          <Input
+            label="Last Name"
+            value={form.lastName}
+            onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+            required
+          />
+        </div>
+        <Input
+          label="Email"
+          type="email"
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
+          required
+        />
+        <div className="input-group">
+          <label className="input-label">Batch Year</label>
+          <select
+            className="input-field"
+            value={form.batchYear}
+            onChange={(e) => setForm({ ...form, batchYear: e.target.value })}
+            required
+          >
+            <option value="">Select batch year</option>
+            {BATCH_YEARS.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Button type="submit" variant="primary" loading={saving}>
+            <Save size={16} /> Save Changes
+          </Button>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+// ─── Security Section ────────────────────────────────────────────────────────
+
+function SecuritySection() {
+  const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [saving, setSaving] = useState(false);
+  const [validations, setValidations] = useState({
+    length: false, uppercase: false, number: false, special: false,
+  });
 
   const validatePassword = (pass) => {
     setValidations({
       length: pass.length >= 8,
       uppercase: /[A-Z]/.test(pass),
       number: /[0-9]/.test(pass),
-      special: /[^A-Za-z0-9]/.test(pass)
+      special: /[^A-Za-z0-9]/.test(pass),
     });
   };
 
-  const handleProfileUpdate = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
-    try {
-      await axios.put(`${getApiUrl()}/api/profile/${user.id}`, { fullName, batchYear, email });
-      setSuccess('Profile updated successfully');
-      
-      const updatedUser = { ...user, fullName };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      setUser(updatedUser);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to update profile');
-    }
-  };
-
-  const handlePasswordChange = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    
-    if (newPassword !== confirmPassword) {
-      setError('New passwords do not match');
+    if (form.newPassword !== form.confirmPassword) {
+      toast.error('Passwords do not match');
       return;
     }
-
-    const isPasswordValid = Object.values(validations).every(Boolean);
-    if (!isPasswordValid) {
-      setError('New password does not meet requirements');
+    if (!Object.values(validations).every(Boolean)) {
+      toast.error('New password does not meet requirements');
       return;
     }
-
-    setPasswordStatus('loading');
+    setSaving(true);
     try {
-      await axios.post(`${getApiUrl()}/api/profile/${user.id}/change-password`, { currentPassword, newPassword });
-      setSuccess('Password changed successfully');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setPasswordStatus('success');
+      await api.post('/api/profile/change-password', {
+        currentPassword: form.currentPassword,
+        newPassword: form.newPassword,
+      });
+      toast.success('Password changed successfully');
+      setForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setValidations({ length: false, uppercase: false, number: false, special: false });
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to change password');
-      setPasswordStatus('error');
+      toast.error(err.response?.data?.error || 'Failed to change password');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const resetAttendeeForm = () => {
-    setAttendeeForm({ fullName: '', email: '', phone: '', batchYear: '', address: '' });
-    setShowAttendeeForm(false);
-    setEditingAttendee(null);
-    setAttendeeError('');
+  const reqItems = [
+    [validations.length, 'Min 8 characters'],
+    [validations.uppercase, 'One uppercase letter'],
+    [validations.number, 'One number'],
+    [validations.special, 'One special character'],
+  ];
+
+  return (
+    <Card>
+      <div style={sectionHeaderStyle}>
+        <Lock size={20} style={{ color: 'var(--color-maroon)' }} />
+        <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700 }}>Security</h3>
+      </div>
+      <form onSubmit={handleSubmit} style={formStyle}>
+        <Input
+          label="Current Password"
+          type="password"
+          value={form.currentPassword}
+          onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
+          required
+        />
+        <div className="input-group">
+          <label className="input-label">New Password</label>
+          <input
+            type="password"
+            className="input-field"
+            value={form.newPassword}
+            onChange={(e) => {
+              setForm({ ...form, newPassword: e.target.value });
+              validatePassword(e.target.value);
+            }}
+            required
+          />
+          <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            {reqItems.map(([valid, label]) => (
+              <p
+                key={label}
+                style={{
+                  margin: 0,
+                  fontSize: 'var(--text-xs)',
+                  color: valid ? 'var(--color-success)' : 'var(--color-text-muted)',
+                  fontWeight: valid ? 600 : 400,
+                }}
+              >
+                {valid ? '✓' : '•'} {label}
+              </p>
+            ))}
+          </div>
+        </div>
+        <Input
+          label="Confirm New Password"
+          type="password"
+          value={form.confirmPassword}
+          onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+          required
+        />
+        <div>
+          <Button type="submit" variant="secondary" loading={saving}>
+            <Lock size={16} /> Change Password
+          </Button>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+// ─── QR Code Section ─────────────────────────────────────────────────────────
+
+function QRCodeSection({ qrToken }) {
+  const [dataUrl, setDataUrl] = useState(null);
+
+  useEffect(() => {
+    if (!qrToken) return;
+    const url = `${window.location.origin}/qr/${qrToken}`;
+    QRCode.toDataURL(url, {
+      width: 250,
+      margin: 2,
+      color: { dark: '#800000', light: '#FFFFFF' },
+    })
+      .then(setDataUrl)
+      .catch(() => toast.error('Failed to generate QR code'));
+  }, [qrToken]);
+
+  return (
+    <Card>
+      <div style={sectionHeaderStyle}>
+        <QrCode size={20} style={{ color: 'var(--color-maroon)' }} />
+        <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700 }}>My QR Code</h3>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+        {dataUrl ? (
+          <>
+            <img
+              src={dataUrl}
+              alt="My QR Code"
+              style={{ width: '200px', height: '200px', borderRadius: 'var(--radius-md)', border: '2px solid var(--color-border)' }}
+            />
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', textAlign: 'center' }}>
+              Show this QR code at the entrance on event day for check-in.
+            </p>
+            <a href={dataUrl} download="goldies-qr.png" style={{ textDecoration: 'none' }}>
+              <Button variant="ghost" size="sm">Download QR</Button>
+            </a>
+          </>
+        ) : (
+          <div style={{ padding: '48px 0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="loading-spinner" />
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+// ─── Attendees Section ───────────────────────────────────────────────────────
+
+const EMPTY_FORM = { fullName: '', email: '', phone: '', batchYear: '', address: '' };
+
+function AttendeesSection() {
+  const [attendees, setAttendees] = useState([]);
+  const [loadingList, setLoadingList] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api.get('/api/attendees')
+      .then(({ data }) => setAttendees(data))
+      .catch(() => toast.error('Failed to load attendees'))
+      .finally(() => setLoadingList(false));
+  }, []);
+
+  const resetForm = () => {
+    setForm(EMPTY_FORM);
+    setEditing(null);
+    setShowForm(false);
   };
 
-  const handleAttendeeSubmit = async (e) => {
-    e.preventDefault();
-    setAttendeeError('');
-
-    if (!attendeeForm.fullName || !attendeeForm.email || !attendeeForm.phone) {
-      setAttendeeError('Full name, email, and phone are required');
-      return;
-    }
-
-    try {
-      if (editingAttendee) {
-        const response = await axios.put(`${getApiUrl()}/api/attendees/${editingAttendee.id}`, attendeeForm);
-        setAttendees(attendees.map(a => a.id === editingAttendee.id ? response.data : a));
-        setSuccess('Attendee updated successfully');
-      } else {
-        const response = await axios.post(`${getApiUrl()}/api/attendees`, { ...attendeeForm, userId: user.id });
-        setAttendees([response.data, ...attendees]);
-        setSuccess('Attendee added successfully');
-      }
-      resetAttendeeForm();
-    } catch (err) {
-      setAttendeeError(err.response?.data?.error || 'Failed to save attendee');
-    }
-  };
-
-  const handleEditAttendee = (attendee) => {
-    setEditingAttendee(attendee);
-    setAttendeeForm({
+  const openEdit = (attendee) => {
+    setEditing(attendee);
+    setForm({
       fullName: attendee.fullName,
       email: attendee.email,
       phone: attendee.phone,
       batchYear: attendee.batchYear || '',
-      address: attendee.address || ''
+      address: attendee.address || '',
     });
-    setShowAttendeeForm(true);
-    setAttendeeError('');
+    setShowForm(true);
   };
 
-  const handleDeleteAttendee = async (id) => {
-    if (!window.confirm('Are you sure you want to archive this attendee?')) return;
-
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
     try {
-      await axios.delete(`${getApiUrl()}/api/attendees/${id}`);
-      setAttendees(attendees.filter(a => a.id !== id));
-      setSuccess('Attendee archived successfully');
+      if (editing) {
+        const { data } = await api.put(`/api/attendees/${editing.id}`, form);
+        setAttendees((prev) => prev.map((a) => (a.id === editing.id ? data : a)));
+        toast.success('Attendee updated');
+      } else {
+        const { data } = await api.post('/api/attendees', form);
+        setAttendees((prev) => [data, ...prev]);
+        toast.success('Attendee added');
+      }
+      resetForm();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to archive attendee');
+      toast.error(err.response?.data?.error || 'Failed to save attendee');
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
-        <Loader2 size={48} className="animate-spin" style={{ color: 'var(--gold)' }} />
-      </div>
-    );
-  }
+  const handleDelete = async (id) => {
+    if (!window.confirm('Archive this attendee?')) return;
+    try {
+      await api.delete(`/api/attendees/${id}`);
+      setAttendees((prev) => prev.filter((a) => a.id !== id));
+      toast.success('Attendee archived');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to archive attendee');
+    }
+  };
 
   return (
-    <div className="container" style={{ maxWidth: '900px' }}>
-      <div className="glass-card" style={{ padding: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-          <Link to={user?.isAdmin ? "/admin" : "/"} style={{ color: 'white', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', opacity: 0.7 }}>
-            <ArrowLeft size={18} /> {user?.isAdmin ? "Back to Admin" : "Back to Home"}
-          </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <User size={24} style={{ color: 'var(--gold)' }} />
-            <h2 style={{ margin: 0, background: 'none', color: 'var(--gold)', fontSize: '1.5rem', WebkitTextFillColor: 'initial' }}>My Profile</h2>
-          </div>
-          <button onClick={handleLogout} className="logout-btn">
-            <LogOut size={16} /> Logout
-          </button>
+    <Card>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--color-border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Users size={20} style={{ color: 'var(--color-maroon)' }} />
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700 }}>My Attendees</h3>
         </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => { resetForm(); setShowForm(true); }}
+        >
+          <Plus size={16} /> Add Attendee
+        </Button>
+      </div>
 
-        {error && (
-          <div className="error-message" style={{ color: '#ff4d4d', textAlign: 'center', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <AlertCircle size={18} />
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="success-message" style={{ color: '#4CAF50', textAlign: 'center', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <CheckCircle size={18} />
-            {success}
-          </div>
-        )}
-
-        <div className="profile-grid">
-          <div>
-            <h3 style={{ borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.5rem', marginBottom: '1.5rem' }}>Personal Details</h3>
-            <form onSubmit={handleProfileUpdate}>
-              <div className="form-group">
-                <label>Full Name</label>
-                <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label>Batch Year</label>
-                <input type="text" value={batchYear} onChange={(e) => setBatchYear(e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label>Email Address</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              </div>
-              <button type="submit" style={{ marginTop: '1rem' }}>
-                <Save size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-                Update Profile
-              </button>
-            </form>
-          </div>
-
-          <div>
-            <h3 style={{ borderBottom: '1px solid var(--glass-border)', paddingBottom: '0.5rem', marginBottom: '1.5rem' }}>Security</h3>
-            <form onSubmit={handlePasswordChange}>
-              <div className="form-group">
-                <label>Current Password</label>
-                <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label>New Password</label>
-                <input 
-                  type="password" 
-                  value={newPassword} 
-                  onChange={(e) => {
-                    setNewPassword(e.target.value);
-                    validatePassword(e.target.value);
-                  }} 
-                  required 
-                />
-                <div className="password-requirements" style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
-                  <p className={validations.length ? 'valid' : ''}>• Min 8 chars</p>
-                  <p className={validations.uppercase ? 'valid' : ''}>• One uppercase</p>
-                  <p className={validations.number ? 'valid' : ''}>• One number</p>
-                  <p className={validations.special ? 'valid' : ''}>• One special</p>
-                </div>
-              </div>
-              <div className="form-group">
-                <label>Confirm New Password</label>
-                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
-              </div>
-              <button type="submit" style={{ marginTop: '1rem', background: 'var(--maroon)', border: '1px solid var(--gold)' }} disabled={passwordStatus === 'loading'}>
-                <Lock size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-                Change Password
-              </button>
-            </form>
-          </div>
-        </div>
-
-        <div style={{ marginTop: '2.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
-              <Users size={20} style={{ color: 'var(--gold)' }} />
-              My Attendees
-            </h3>
-            <button onClick={() => { resetAttendeeForm(); setShowAttendeeForm(true); }} className="add-attendee-btn">
-              <Plus size={18} /> Add Attendee
+      {showForm && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            background: 'var(--color-surface-alt)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)',
+            padding: '20px',
+            marginBottom: '20px',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h4 style={{ fontWeight: 700 }}>{editing ? 'Edit Attendee' : 'New Attendee'}</h4>
+            <button
+              onClick={resetForm}
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center' }}
+            >
+              <X size={18} />
             </button>
           </div>
-
-          {showAttendeeForm && (
-            <div className="attendee-form-container">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h4 style={{ margin: 0 }}>{editingAttendee ? 'Edit Attendee' : 'Add New Attendee'}</h4>
-                <button onClick={resetAttendeeForm} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
-                  <X size={20} />
-                </button>
-              </div>
-
-              {attendeeError && (
-                <div style={{ color: '#ff4d4d', marginBottom: '1rem', fontSize: '0.9rem' }}>
-                  {attendeeError}
-                </div>
-              )}
-
-              <form onSubmit={handleAttendeeSubmit} className="attendee-form">
-                <div className="form-group">
-                  <label>Full Name *</label>
-                  <input type="text" value={attendeeForm.fullName} onChange={(e) => setAttendeeForm({ ...attendeeForm, fullName: e.target.value })} required />
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Email *</label>
-                    <input type="email" value={attendeeForm.email} onChange={(e) => setAttendeeForm({ ...attendeeForm, email: e.target.value })} required />
-                  </div>
-                  <div className="form-group">
-                    <label>Phone *</label>
-                    <input type="tel" value={attendeeForm.phone} onChange={(e) => setAttendeeForm({ ...attendeeForm, phone: e.target.value })} required />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Batch Year</label>
-                    <input type="text" value={attendeeForm.batchYear} onChange={(e) => setAttendeeForm({ ...attendeeForm, batchYear: e.target.value })} />
-                  </div>
-                  <div className="form-group">
-                    <label>Address</label>
-                    <input type="text" value={attendeeForm.address} onChange={(e) => setAttendeeForm({ ...attendeeForm, address: e.target.value })} />
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
-                  <button type="submit">
-                    <Save size={16} style={{ marginRight: '6px' }} />
-                    {editingAttendee ? 'Update' : 'Save'} Attendee
-                  </button>
-                  <button type="button" onClick={resetAttendeeForm} style={{ background: 'rgba(255,255,255,0.1)' }}>
-                    Cancel
-                  </button>
-                </div>
-              </form>
+          <form onSubmit={handleSubmit} style={formStyle}>
+            <Input
+              label="Full Name *"
+              value={form.fullName}
+              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+              required
+            />
+            <div style={twoColStyle}>
+              <Input
+                label="Email *"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                required
+              />
+              <Input
+                label="Phone *"
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                required
+              />
             </div>
-          )}
+            <div style={twoColStyle}>
+              <Input
+                label="Batch Year"
+                value={form.batchYear}
+                onChange={(e) => setForm({ ...form, batchYear: e.target.value })}
+              />
+              <Input
+                label="Address"
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <Button type="submit" variant="primary" size="sm" loading={saving}>
+                <Save size={14} /> {editing ? 'Update' : 'Save'}
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={resetForm}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </motion.div>
+      )}
 
-          {attendeesLoading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
-              <Loader2 size={32} className="animate-spin" style={{ color: 'var(--gold)' }} />
-            </div>
-          ) : attendees.length > 0 ? (
-            <div className="attendees-table-container">
-              <table className="attendees-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Batch</th>
-                    <th style={{ textAlign: 'center' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {attendees.map((attendee) => (
-                    <tr key={attendee.id}>
-                      <td>{attendee.fullName}</td>
-                      <td>{attendee.email}</td>
-                      <td>{attendee.phone}</td>
-                      <td>{attendee.batchYear || '-'}</td>
-                      <td style={{ textAlign: 'center' }}>
-                        <button onClick={() => handleEditAttendee(attendee)} className="action-btn edit-btn" title="Edit">
-                          <Edit2 size={16} />
-                        </button>
-                        <button onClick={() => handleDeleteAttendee(attendee.id)} className="action-btn delete-btn" title="Archive">
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
-              No attendees registered yet. Click "Add Attendee" to get started.
-            </div>
-          )}
+      {loadingList ? (
+        <div style={{ padding: '32px 0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="loading-spinner" />
         </div>
-      </div>
-      <div className="footer">"Let's bleed gold!"</div>
+      ) : attendees.length === 0 ? (
+        <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '32px 0' }}>
+          No attendees yet. Click "Add Attendee" to get started.
+        </p>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
+            <thead>
+              <tr>
+                {['Name', 'Email', 'Phone', 'Batch', 'Actions'].map((h) => (
+                  <th
+                    key={h}
+                    style={{
+                      padding: '10px 12px',
+                      textAlign: 'left',
+                      fontWeight: 600,
+                      color: 'var(--color-text-muted)',
+                      borderBottom: '1px solid var(--color-border)',
+                      background: 'var(--color-surface-alt)',
+                    }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {attendees.map((a) => (
+                <tr key={a.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  <td style={{ padding: '10px 12px' }}>{a.fullName}</td>
+                  <td style={{ padding: '10px 12px', color: 'var(--color-text-muted)' }}>{a.email}</td>
+                  <td style={{ padding: '10px 12px', color: 'var(--color-text-muted)' }}>{a.phone}</td>
+                  <td style={{ padding: '10px 12px', color: 'var(--color-text-muted)' }}>{a.batchYear || '—'}</td>
+                  <td style={{ padding: '10px 12px' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => openEdit(a)}
+                        title="Edit"
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: 'var(--color-gold-dark)',
+                          padding: '4px',
+                          borderRadius: 'var(--radius-sm)',
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Edit2 size={15} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(a.id)}
+                        title="Archive"
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: 'var(--color-error)',
+                          padding: '4px',
+                          borderRadius: 'var(--radius-sm)',
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
 
-      <style>{`
-        .profile-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 2rem;
-        }
-        .logout-btn {
-          background: rgba(255, 77, 77, 0.1);
-          border: 1px solid #ff4d4d;
-          color: #ff4d4d;
-          padding: 0.4rem 0.8rem;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          cursor: pointer;
-          font-size: 0.9rem;
-          font-weight: bold;
-          transition: all 0.2s ease;
-          margin-left: 15px;
-        }
-        .logout-btn:hover {
-          background: rgba(255, 77, 77, 0.2);
-        }
-        .add-attendee-btn {
-          background: linear-gradient(45deg, var(--maroon), #8b0000);
-          color: white;
-          border: 1px solid var(--gold);
-          padding: 0.5rem 1rem;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          cursor: pointer;
-          font-size: 0.9rem;
-          font-weight: bold;
-          transition: all 0.2s ease;
-        }
-        .add-attendee-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-        .attendee-form-container {
-          background: rgba(0,0,0,0.2);
-          border: 1px solid var(--glass-border);
-          border-radius: 12px;
-          padding: 1.5rem;
-          margin-bottom: 1.5rem;
-        }
-        .attendee-form .form-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 1rem;
-        }
-        .attendees-table-container {
-          overflow-x: auto;
-        }
-        .attendees-table {
-          width: 100%;
-          border-collapse: collapse;
-          color: white;
-        }
-        .attendees-table th,
-        .attendees-table td {
-          padding: 12px;
-          text-align: left;
-          border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .attendees-table th {
-          background: rgba(0,0,0,0.2);
-          font-weight: bold;
-          color: var(--gold);
-        }
-        .attendees-table tr:hover {
-          background: rgba(255,255,255,0.05);
-        }
-        .action-btn {
-          background: transparent;
-          border: none;
-          cursor: pointer;
-          padding: 6px;
-          border-radius: 4px;
-          transition: all 0.2s ease;
-        }
-        .action-btn.edit-btn {
-          color: var(--gold);
-        }
-        .action-btn.edit-btn:hover {
-          background: rgba(255, 215, 0, 0.1);
-        }
-        .action-btn.delete-btn {
-          color: #ff4d4d;
-        }
-        .action-btn.delete-btn:hover {
-          background: rgba(255, 77, 77, 0.1);
-        }
-        @media (max-width: 768px) {
-          .profile-grid {
-            grid-template-columns: 1fr;
-            gap: 1.5rem;
-          }
-          .logout-btn {
-            margin-left: 0;
-            padding: 0.3rem 0.6rem;
-            font-size: 0.85rem;
-          }
-          .attendee-form .form-row {
-            grid-template-columns: 1fr;
-          }
-          .attendees-table th:nth-child(3),
-          .attendees-table td:nth-child(3),
-          .attendees-table th:nth-child(4),
-          .attendees-table td:nth-child(4) {
-            display: none;
-          }
-        }
-        .animate-spin {
-          animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .password-requirements p {
-          margin: 0;
-          opacity: 0.6;
-        }
-        .password-requirements p.valid {
-          color: #4CAF50;
-          opacity: 1;
-        }
-      `}</style>
-    </div>
+// ─── Invite Others Section ───────────────────────────────────────────────────
+
+function InviteSection() {
+  const [emails, setEmails] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const handleSend = async (e) => {
+    e.preventDefault();
+    const emailList = emails
+      .split(/[\n,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (emailList.length === 0) {
+      toast.error('Please enter at least one email address');
+      return;
+    }
+
+    setSending(true);
+    try {
+      const { data } = await api.post('/api/invitations', { emails: emailList });
+      const sent = data.results?.filter((r) => r.status === 'sent').length || 0;
+      const skipped = (data.results?.length || 0) - sent;
+      if (sent > 0) toast.success(`${sent} invitation${sent > 1 ? 's' : ''} sent`);
+      if (skipped > 0) toast(`${skipped} skipped (already registered or invited)`, { icon: 'ℹ️' });
+      setEmails('');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to send invitations');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Card>
+      <div style={sectionHeaderStyle}>
+        <Mail size={20} style={{ color: 'var(--color-maroon)' }} />
+        <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700 }}>Invite Others</h3>
+      </div>
+      <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', marginBottom: '16px' }}>
+        Enter email addresses below (one per line or comma-separated) to send invitations.
+      </p>
+      <form onSubmit={handleSend} style={formStyle}>
+        <Input
+          as="textarea"
+          label="Email Addresses"
+          value={emails}
+          onChange={(e) => setEmails(e.target.value)}
+          placeholder={'friend@example.com\nanother@example.com'}
+          rows={5}
+        />
+        <div>
+          <Button type="submit" variant="primary" loading={sending}>
+            <Mail size={16} /> Send Invitations
+          </Button>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+// ─── Profile Page ────────────────────────────────────────────────────────────
+
+const ProfilePage = () => {
+  const { user, logout, setUser } = useAuth();
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  useEffect(() => {
+    api.get('/api/profile')
+      .then(({ data }) => setProfile(data))
+      .catch(() => toast.error('Failed to load profile'))
+      .finally(() => setLoadingProfile(false));
+  }, []);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
+
+  const handleProfileSaved = (updatedUser) => {
+    setProfile((prev) => ({ ...prev, ...updatedUser }));
+    if (setUser) setUser((prev) => ({ ...prev, ...updatedUser }));
+  };
+
+  const displayName = profile
+    ? `${profile.firstName} ${profile.lastName}`
+    : user
+      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+      : '';
+
+  return (
+    <PageContainer className="page-content--wide">
+      <div style={{ width: '100%' }}>
+        <motion.div
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '24px',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <div>
+            <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, color: 'var(--color-maroon)' }}>
+              My Profile
+            </h1>
+            {displayName && (
+              <p style={{ color: 'var(--color-text-muted)', marginTop: '4px' }}>{displayName}</p>
+            )}
+          </div>
+          <Button variant="danger" size="sm" onClick={handleLogout}>
+            <LogOut size={16} /> Logout
+          </Button>
+        </motion.div>
+
+        {loadingProfile ? (
+          <div style={{ padding: '80px 0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="loading-spinner" />
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <PersonalDetailsSection profile={profile} onSaved={handleProfileSaved} />
+            <SecuritySection />
+            <QRCodeSection qrToken={profile?.qrToken} />
+            <AttendeesSection />
+            <InviteSection />
+          </div>
+        )}
+      </div>
+    </PageContainer>
   );
 };
 

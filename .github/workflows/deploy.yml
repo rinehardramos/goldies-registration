@@ -11,8 +11,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to Render
+      - name: Sync Render blueprint
         if: github.ref == 'refs/heads/main'
         run: |
-          curl -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+          curl -s -o /dev/null -w "%{http_code}" \
+               -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
                -X POST https://api.render.com/v1/blueprints/${{ secrets.RENDER_BLUEPRINT_ID }}/sync
+
+      - name: Redeploy backend
+        if: github.ref == 'refs/heads/main' && secrets.RENDER_BACKEND_SERVICE_ID != ''
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+               -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+               -H "Content-Type: application/json" \
+               -d '{"clearCache":"do_not_clear"}' \
+               -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_BACKEND_SERVICE_ID }}/deploys"
+
+      - name: Redeploy frontend
+        if: github.ref == 'refs/heads/main' && secrets.RENDER_FRONTEND_SERVICE_ID != ''
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+               -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+               -H "Content-Type: application/json" \
+               -d '{"clearCache":"do_not_clear"}' \
+               -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_FRONTEND_SERVICE_ID }}/deploys"

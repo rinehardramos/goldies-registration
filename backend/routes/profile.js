@@ -3,6 +3,7 @@ const express = require('express');
 const bcrypt  = require('bcryptjs');
 const pool    = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { validators, validationError } = require('../middleware/validate');
 
 const router = express.Router();
 
@@ -35,9 +36,15 @@ router.get('/', requireAuth, async (req, res) => {
 router.put('/', requireAuth, async (req, res) => {
   const { firstName, lastName, email, batchYear } = req.body;
 
-  if (!firstName || !lastName || !email || !batchYear) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
+  if (validationError(res, {
+    firstName: () => validators.name(firstName),
+    lastName:  () => validators.name(lastName),
+    email:     () => validators.email(email),
+    batchYear: () => {
+      if (!batchYear) return 'required';
+      return validators.batchYear(batchYear);
+    },
+  })) return;
 
   try {
     const { rows } = await pool.query(
@@ -45,7 +52,7 @@ router.put('/', requireAuth, async (req, res) => {
        SET first_name = $1, last_name = $2, email = $3, batch_year = $4
        WHERE id = $5
        RETURNING *`,
-      [firstName, lastName, email, batchYear, req.user.id],
+      [firstName.trim(), lastName.trim(), email.trim().toLowerCase(), batchYear, req.user.id],
     );
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
     res.json(shapeUser(rows[0]));
@@ -60,9 +67,10 @@ router.put('/', requireAuth, async (req, res) => {
 router.post('/change-password', requireAuth, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
+  if (validationError(res, {
+    currentPassword: () => (typeof currentPassword === 'string' && currentPassword.length ? null : 'required'),
+    newPassword:     () => validators.password(newPassword),
+  })) return;
 
   try {
     const { rows } = await pool.query(

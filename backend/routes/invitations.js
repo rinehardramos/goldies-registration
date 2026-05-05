@@ -2,8 +2,11 @@
 const express = require('express');
 const pool    = require('../db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { validators } = require('../middleware/validate');
 
 const router = express.Router();
+
+const MAX_INVITE_BATCH = 50; // cap emails per request
 
 // POST /api/invitations  – send invitations to a list of emails
 router.post('/', requireAuth, async (req, res) => {
@@ -13,9 +16,20 @@ router.post('/', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'emails must be a non-empty array' });
   }
 
+  if (emails.length > MAX_INVITE_BATCH) {
+    return res.status(400).json({ error: `Maximum ${MAX_INVITE_BATCH} emails per request` });
+  }
+
+  // Validate every email before doing any DB work
+  const invalidEmails = emails.filter(e => validators.email(e) !== null);
+  if (invalidEmails.length) {
+    return res.status(400).json({ error: 'One or more invalid email addresses', invalid: invalidEmails });
+  }
+
   const results = [];
 
-  for (const email of emails) {
+  for (const rawEmail of emails) {
+    const email = rawEmail.trim().toLowerCase();
     try {
       // Check already registered
       const { rows: registered } = await pool.query(

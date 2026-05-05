@@ -2,6 +2,7 @@
 const express = require('express');
 const pool    = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { validators, validationError } = require('../middleware/validate');
 
 const router = express.Router();
 
@@ -16,21 +17,29 @@ const ATTENDEE_COLS = `
   created_at  AS "createdAt"
 `;
 
+function validateAttendeeBody(res, { fullName, email, phone, batchYear, address }) {
+  return validationError(res, {
+    fullName:  () => validators.name(fullName, { max: 200 }),
+    email:     () => validators.email(email),
+    phone:     () => validators.phone(phone),
+    batchYear: () => validators.batchYear(batchYear),
+    address:   () => validators.address(address),
+  });
+}
+
 // POST /api/attendees
 router.post('/', requireAuth, async (req, res) => {
   const { fullName, email, phone, batchYear, address } = req.body;
   const userId = req.user.id;
 
-  if (!fullName || !email || !phone) {
-    return res.status(400).json({ error: 'Missing required fields: fullName, email, and phone are required' });
-  }
+  if (validateAttendeeBody(res, { fullName, email, phone, batchYear, address })) return;
 
   try {
     const { rows } = await pool.query(
       `INSERT INTO attendees (user_id, full_name, email, phone, batch_year, address)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING ${ATTENDEE_COLS}`,
-      [userId, fullName, email, phone, batchYear || null, address || null],
+      [userId, fullName.trim(), email.trim().toLowerCase(), phone.trim(), batchYear || null, address || null],
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -94,9 +103,7 @@ router.put('/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { fullName, email, phone, batchYear, address } = req.body;
 
-  if (!fullName || !email || !phone) {
-    return res.status(400).json({ error: 'Missing required fields: fullName, email, and phone are required' });
-  }
+  if (validateAttendeeBody(res, { fullName, email, phone, batchYear, address })) return;
 
   try {
     // Ownership check
@@ -115,7 +122,7 @@ router.put('/:id', requireAuth, async (req, res) => {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $6 AND is_archived = FALSE
        RETURNING ${ATTENDEE_COLS}`,
-      [fullName, email, phone, batchYear || null, address || null, id],
+      [fullName.trim(), email.trim().toLowerCase(), phone.trim(), batchYear || null, address || null, id],
     );
 
     if (!rows.length) return res.status(404).json({ error: 'Attendee not found or archived' });

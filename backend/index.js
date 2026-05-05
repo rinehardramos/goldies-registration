@@ -1,8 +1,9 @@
 'use strict';
-const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
+const express    = require('express');
+const cors       = require('cors');
+const morgan     = require('morgan');
 const cookieParser = require('cookie-parser');
+const rateLimit  = require('express-rate-limit');
 require('dotenv').config();
 
 const migrate = require('./migrate');
@@ -29,8 +30,39 @@ app.use(cors({
   credentials: true,
 }));
 
+// ── Rate limiting ────────────────────────────────────────────────────────────
+// Tight limit on auth endpoints to slow brute-force / credential-stuffing
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 min
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+
+// Moderate limit on public QR lookups
+const qrLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 min
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+
+// Global fallback – generous but still bounded
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+
+app.use(globalLimiter);
+
 // ── Core middleware ──────────────────────────────────────────────────────────
-app.use(express.json());
+// 10 kb body cap — prevents memory-exhaustion / buffer-overflow via large payloads
+app.use(express.json({ limit: '10kb' }));
 app.use(cookieParser());
 app.use(morgan('dev'));
 
@@ -41,11 +73,11 @@ app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Da
 const authRouter = require('./routes/auth');
 
 // /api/login  – top-level login endpoint the frontend uses
-app.post('/api/login', authRouter.loginHandler);
+app.post('/api/login', authLimiter, authRouter.loginHandler);
 
-app.use('/api/auth',        authRouter);
+app.use('/api/auth',        authLimiter, authRouter);
+app.use('/api/qr',          qrLimiter,  require('./routes/qr'));
 app.use('/api/invitations', require('./routes/invitations'));
-app.use('/api/qr',          require('./routes/qr'));
 app.use('/api/checkin',     require('./routes/checkin'));
 app.use('/api/profile',     require('./routes/profile'));
 app.use('/api/attendees',   require('./routes/attendees'));

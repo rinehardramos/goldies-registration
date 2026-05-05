@@ -2,11 +2,15 @@
 const express = require('express');
 const pool    = require('../db');
 const { requireAdmin } = require('../middleware/auth');
+const { validators, validationError } = require('../middleware/validate');
 
 const router = express.Router();
 
 // All admin routes require admin role
 router.use(requireAdmin);
+
+// Allowlist for settings keys — prevents arbitrary key injection
+const ALLOWED_SETTINGS_KEYS = new Set(['event_date']);
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
@@ -65,9 +69,15 @@ router.put('/registrations/:id', async (req, res) => {
   const { id } = req.params;
   const { firstName, lastName, batchYear, email } = req.body;
 
-  if (!firstName || !lastName || !batchYear || !email) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
+  if (validationError(res, {
+    firstName: () => validators.name(firstName),
+    lastName:  () => validators.name(lastName),
+    email:     () => validators.email(email),
+    batchYear: () => {
+      if (!batchYear) return 'required';
+      return validators.batchYear(batchYear);
+    },
+  })) return;
 
   try {
     const { rows } = await pool.query(
@@ -76,7 +86,7 @@ router.put('/registrations/:id', async (req, res) => {
        WHERE id = $5
        RETURNING id, first_name AS "firstName", last_name AS "lastName",
                  batch_year AS "batchYear", email, is_admin AS "isAdmin", created_at AS "createdAt"`,
-      [firstName, lastName, batchYear, email, id],
+      [firstName.trim(), lastName.trim(), batchYear, email.trim().toLowerCase(), id],
     );
 
     if (!rows.length) return res.status(404).json({ error: 'Registration not found' });
@@ -112,7 +122,7 @@ router.get('/attendees', async (_req, res) => {
   }
 });
 
-// DELETE /api/admin/attendees/:id  (hard delete or archive)
+// DELETE /api/admin/attendees/:id  (archive)
 router.delete('/attendees/:id', async (req, res) => {
   const { id } = req.params;
 
@@ -154,6 +164,14 @@ router.put('/settings', async (req, res) => {
 
   if (!key || value === undefined) {
     return res.status(400).json({ error: 'key and value are required' });
+  }
+
+  if (!ALLOWED_SETTINGS_KEYS.has(key)) {
+    return res.status(400).json({ error: `Invalid settings key. Allowed: ${[...ALLOWED_SETTINGS_KEYS].join(', ')}` });
+  }
+
+  if (typeof value !== 'string' || value.length > 100) {
+    return res.status(400).json({ error: 'value must be a string (max 100 chars)' });
   }
 
   try {

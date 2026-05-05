@@ -4,6 +4,7 @@ const bcrypt  = require('bcryptjs');
 const pool    = require('../db');
 const tokenService = require('../services/token');
 const { requireAuth } = require('../middleware/auth');
+const { validators, validationError } = require('../middleware/validate');
 
 const router = express.Router();
 
@@ -29,15 +30,16 @@ const shapeUser = (user) => ({
 const loginHandler = async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Missing email or password' });
-  }
+  if (validationError(res, {
+    email:    () => validators.email(email),
+    password: () => (typeof password === 'string' && password.length ? null : 'required'),
+  })) return;
 
   try {
     console.log('Login attempt for: ' + email);
     const { rows } = await pool.query(
       'SELECT * FROM registrations WHERE email = $1',
-      [email],
+      [email.trim().toLowerCase()],
     );
     const user = rows[0];
 
@@ -70,8 +72,17 @@ const loginHandler = async (req, res) => {
 router.post('/register', async (req, res) => {
   const { firstName, lastName, email, password, batchYear, invitationToken } = req.body;
 
-  if (!firstName || !lastName || !email || !password || !batchYear) {
-    return res.status(400).json({ error: 'Missing required fields' });
+  if (validationError(res, {
+    firstName: () => validators.name(firstName),
+    lastName:  () => validators.name(lastName),
+    email:     () => validators.email(email),
+    password:  () => validators.password(password),
+    batchYear: () => validators.batchYear(batchYear),
+  })) return;
+
+  // batchYear is required for registration
+  if (!batchYear) {
+    return res.status(400).json({ error: 'Validation failed', errors: { batchYear: 'required' } });
   }
 
   try {
@@ -80,7 +91,7 @@ router.post('/register', async (req, res) => {
       `INSERT INTO registrations (first_name, last_name, email, password, batch_year)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [firstName, lastName, email, hashedPassword, batchYear],
+      [firstName.trim(), lastName.trim(), email.trim().toLowerCase(), hashedPassword, batchYear],
     );
     const user = rows[0];
 

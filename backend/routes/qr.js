@@ -1,6 +1,7 @@
 'use strict';
 const express = require('express');
 const pool    = require('../db');
+const { validators } = require('../middleware/validate');
 
 const router = express.Router();
 
@@ -8,6 +9,10 @@ const router = express.Router();
 // Returns type: 'register' | 'already_registered' | 'checkin'
 router.get('/:token', async (req, res) => {
   const { token } = req.params;
+
+  if (validators.uuid(token) !== null) {
+    return res.status(400).json({ error: 'Invalid QR token' });
+  }
 
   try {
     // Get event date from settings

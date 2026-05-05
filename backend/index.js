@@ -11,6 +11,11 @@ const migrate = require('./migrate');
 const app = express();
 const port = process.env.PORT || 5001;
 
+// Railway (and most PaaS) sit behind a reverse proxy that sets X-Forwarded-For.
+// Without this, express-rate-limit throws ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
+// and every request behind the proxy returns 500.
+app.set('trust proxy', 1);
+
 // ── CORS ────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
   'http://localhost:5173',

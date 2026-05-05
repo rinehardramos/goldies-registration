@@ -1,4 +1,4 @@
-FROM node:25-slim
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
@@ -6,8 +6,18 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
+RUN npm run build
 
-EXPOSE 5173
+# Production stage
+FROM node:20-slim
 
-# Run in dev mode for local environment
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+WORKDIR /app
+
+RUN npm install -g serve
+
+COPY --from=builder /app/dist ./dist
+
+EXPOSE 3000
+
+# serve with SPA fallback (-s flag)
+CMD ["sh", "-c", "serve dist -s -l ${PORT:-3000}"]

@@ -6,7 +6,13 @@
   "scripts": {
     "start": "node index.js",
     "seed": "node seed.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest --runInBand --forceExit",
+    "test:security": "jest tests/security --runInBand --forceExit",
+    "test:e2e": "jest tests/e2e --runInBand --forceExit"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/tests/**/*.test.js"]
   },
   "keywords": [],
   "author": "",
@@ -25,5 +31,9 @@
     "qrcode": "^1.5.4",
     "resend": "^6.12.2",
     "uuid": "^14.0.0"
+  },
+  "devDependencies": {
+    "jest": "^30.3.0",
+    "supertest": "^7.2.2"
   }
 }

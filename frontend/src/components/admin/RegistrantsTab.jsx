@@ -193,18 +193,21 @@ const RegistrantsTab = () => {
                       <td style={{ padding: 'var(--space-3)', color: 'var(--color-text-muted)' }}>
                         {reg.createdAt ? new Date(reg.createdAt).toLocaleDateString() : '-'}
                       </td>
-                      <td style={{ padding: 'var(--space-3)', whiteSpace: 'nowrap', display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <button onClick={() => startEdit(reg)} style={{ background: 'none', border: 'none', color: 'var(--color-maroon)', cursor: 'pointer' }} title="Edit">
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleResendConfirmation(reg.id)}
-                          disabled={resendingId === reg.id}
-                          style={{ background: 'none', border: 'none', color: 'var(--color-gold)', cursor: 'pointer' }}
-                          title="Resend confirmation email"
-                        >
-                          <RefreshCw size={15} style={resendingId === reg.id ? { animation: 'spin 1s linear infinite' } : {}} />
-                        </button>
+                      <td style={{ padding: 'var(--space-3)', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <button onClick={() => startEdit(reg)} style={{ background: 'none', border: 'none', color: 'var(--color-maroon)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-sm)' }} title="Edit">
+                            <Edit2 size={14} /> Edit
+                          </button>
+                          <button
+                            onClick={() => handleResendConfirmation(reg.id)}
+                            disabled={resendingId === reg.id}
+                            style={{ background: 'none', border: '1px solid var(--color-gold)', color: 'var(--color-gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-sm)', borderRadius: 'var(--radius-sm)', padding: '2px 8px' }}
+                            title="Resend confirmation email"
+                          >
+                            <RefreshCw size={13} style={resendingId === reg.id ? { animation: 'spin 1s linear infinite' } : {}} />
+                            {resendingId === reg.id ? 'Sending…' : 'Resend'}
+                          </button>
+                        </div>
                       </td>
                     </>
                   )}

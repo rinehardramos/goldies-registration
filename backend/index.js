@@ -16,6 +16,9 @@ const allowedOrigins = [
   'http://localhost:5180',
   'https://goldies2026.onrender.com',
   'https://goldies-backend-s3j5.onrender.com',
+  'https://goldies-frontend-production.up.railway.app',
+  'https://goldies-registration-production.up.railway.app',
+  'https://goldies.space',
 ];
 
 app.use(cors({

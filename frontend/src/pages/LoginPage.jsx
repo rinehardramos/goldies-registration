@@ -1,123 +1,90 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
-import { LogIn, UserPlus, AlertCircle, User } from 'lucide-react';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
+import PageContainer from '../components/layout/PageContainer';
+import Card from '../components/ui/Card';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
 import Countdown from '../components/Countdown';
 
-const LoginPage = () => {
+export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [status, setStatus] = useState('idle');
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login, user } = useAuth();
   const navigate = useNavigate();
 
-  const loggedInUser = (() => {
-    try {
-      const u = localStorage.getItem('user');
-      return u && u !== 'undefined' ? JSON.parse(u) : null;
-    } catch (e) {
-      return null;
-    }
-  })();
+  // Redirect if already logged in
+  if (user) {
+    navigate(user.isAdmin ? '/admin' : '/profile', { replace: true });
+    return null;
+  }
 
-  const handleSubmit = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
-    setStatus('loading');
-    setError('');
+    setLoading(true);
     try {
-      let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-      if (!apiUrl.startsWith('http')) apiUrl = `https://${apiUrl}`;
-      
-      const response = await axios.post(`${apiUrl}/api/login`, { email, password });
-      setStatus('success');
-      
-      const userData = response.data.user;
-      if (userData) {
-        localStorage.setItem('user', JSON.stringify(userData));
-      }
-      
-      console.log('Login success:', userData);
-      
-      if (userData.isAdmin) {
-        navigate('/admin');
-      } else {
-        navigate('/profile');
-      }
+      const loggedInUser = await login(email, password);
+      toast.success('Welcome back!');
+      navigate(loggedInUser.isAdmin ? '/admin' : '/profile');
     } catch (err) {
-      setError(err.response?.data?.error || 'Invalid email or password');
-      setStatus('error');
+      toast.error(err.response?.data?.error || 'Login failed');
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="container">
-      <div className="glass-card">
-        <h1>Goldies Day 2026</h1>
-        <Countdown />
-        <h2 style={{ textAlign: 'center', marginBottom: '2rem', color: 'var(--gold)' }}>Welcome Back</h2>
+    <PageContainer>
+      <div className="login-page">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="login-header"
+        >
+          <h1>Goldies Day 2026</h1>
+          <Countdown />
+        </motion.div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="email">Email Address</label>
-            <input
-              type="email"
+        <Card className="login-card">
+          <h2>Sign In</h2>
+          <form onSubmit={handleSubmit}>
+            <Input
+              label="Email"
               id="email"
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
+              placeholder="your@email.com"
               required
             />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
+            <Input
+              label="Password"
               id="password"
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
               required
             />
-          </div>
-
-          <button type="submit" disabled={status === 'loading'}>
-            {status === 'loading' ? 'Logging in...' : (
-              <>
-                <LogIn size={20} style={{ verticalAlign: 'middle', marginRight: '8px' }} />
-                Login
-              </>
-            )}
-          </button>
-
-          {error && (
-            <div className="error-message" style={{ color: '#ff4d4d', textAlign: 'center', marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              <AlertCircle size={18} />
-              {error}
-            </div>
-          )}
-        </form>
-
-        <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-          {loggedInUser ? (
-            <Link to={loggedInUser.isAdmin ? "/admin" : "/profile"} style={{ color: 'var(--gold)', fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              <User size={18} />
-              Go to {loggedInUser.isAdmin ? "Admin Dashboard" : "My Profile"}
-            </Link>
-          ) : (
-            <>
-              <p style={{ opacity: 0.8 }}>Don't have an account?</p>
-              <Link to="/register" style={{ color: 'var(--gold)', fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '0.5rem' }}>
-                <UserPlus size={18} />
-                Register Here
-              </Link>
-            </>
-          )}
-        </div>
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              loading={loading}
+              fullWidth
+              className="login-btn"
+            >
+              Sign In
+            </Button>
+          </form>
+          <p className="login-footer">
+            Don&apos;t have an account? <Link to="/register">Register here</Link>
+          </p>
+        </Card>
       </div>
-      <div className="footer">"Let's bleed gold!"</div>
-    </div>
+    </PageContainer>
   );
-};
-
-export default LoginPage;
+}

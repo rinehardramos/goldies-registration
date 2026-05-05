@@ -20,6 +20,7 @@ const allowedOrigins = [
   'https://goldies-frontend-production.up.railway.app',
   'https://goldies-registration-production.up.railway.app',
   'https://goldies.space',
+  'https://api.goldies.space',
 ];
 
 app.use(cors({

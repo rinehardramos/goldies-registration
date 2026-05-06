@@ -222,3 +222,4 @@ const RegistrantsTab = () => {
 };
 
 export default RegistrantsTab;
+

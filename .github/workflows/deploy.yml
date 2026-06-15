@@ -14,5 +14,6 @@ jobs:
       - name: Deploy to Render
         if: github.ref == 'refs/heads/main'
         run: |
-          curl -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+          curl --fail --show-error --silent \
+               -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
                -X POST https://api.render.com/v1/blueprints/${{ secrets.RENDER_BLUEPRINT_ID }}/sync

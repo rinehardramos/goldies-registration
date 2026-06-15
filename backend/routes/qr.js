@@ -25,26 +25,35 @@ router.get('/:token', async (req, res) => {
 
     // Check registrations table first (registered user's personal QR)
     const { rows: regRows } = await pool.query(
-      `SELECT id, first_name, last_name, batch_year, email FROM registrations WHERE qr_token = $1`,
+      `SELECT r.id, r.first_name, r.last_name, r.batch_year, r.email,
+              c.checked_in_at
+       FROM registrations r
+       LEFT JOIN check_ins c ON c.registration_id = r.id
+       WHERE r.qr_token = $1`,
       [token],
     );
     if (regRows.length) {
       const user = regRows[0];
+      const registrant = {
+        id: user.id,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        batchYear: user.batch_year,
+        email: user.email,
+      };
       if (isEventDay) {
         return res.json({
           type: 'checkin',
-          id: user.id,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          batchYear: user.batch_year,
-          email: user.email,
+          registrant,
+          alreadyCheckedIn: Boolean(user.checked_in_at),
+          checkedInAt: user.checked_in_at || null,
+          eventDate: eventDate?.toISOString() || null,
         });
       }
       return res.json({
         type: 'already_registered',
-        firstName: user.first_name,
-        lastName: user.last_name,
-        batchYear: user.batch_year,
+        registrant,
+        eventDate: eventDate?.toISOString() || null,
       });
     }
 

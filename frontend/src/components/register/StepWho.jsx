@@ -14,8 +14,8 @@ const EMPTY_FORM = {
   confirmPassword: '',
 };
 
-export default function StepWho({ onAdd, existingTypes }) {
-  const [form, setForm] = useState(EMPTY_FORM);
+export default function StepWho({ onAdd, existingTypes, prefillEmail = '', inviteToken = '' }) {
+  const [form, setForm] = useState({ ...EMPTY_FORM, email: prefillEmail });
   const [errors, setErrors] = useState({});
 
   // Only allow one "myself" registrant
@@ -57,8 +57,8 @@ export default function StepWho({ onAdd, existingTypes }) {
       setErrors(errs);
       return;
     }
-    onAdd({ ...form });
-    setForm(EMPTY_FORM);
+    onAdd({ ...form, invitationToken: inviteToken || null });
+    setForm({ ...EMPTY_FORM, email: prefillEmail });
     setErrors({});
   }
 

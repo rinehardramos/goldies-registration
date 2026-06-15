@@ -1,5 +1,6 @@
 'use strict';
 const express = require('express');
+const bcrypt  = require('bcryptjs');
 const pool    = require('../db');
 const { requireAdmin } = require('../middleware/auth');
 const { validators, validationError } = require('../middleware/validate');
@@ -44,8 +45,20 @@ router.get('/dashboard', async (_req, res) => {
 // ── Registrations ─────────────────────────────────────────────────────────────
 
 // GET /api/admin/registrations
-router.get('/registrations', async (_req, res) => {
+router.get('/registrations', async (req, res) => {
+  const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+
   try {
+    const params = [];
+    let whereClause = '';
+    if (search) {
+      params.push(`%${search}%`);
+      whereClause = `WHERE first_name ILIKE $1
+                        OR last_name ILIKE $1
+                        OR email ILIKE $1
+                        OR batch_year ILIKE $1`;
+    }
+
     const { rows } = await pool.query(
       `SELECT id,
               first_name AS "firstName",
@@ -53,14 +66,74 @@ router.get('/registrations', async (_req, res) => {
               email,
               batch_year AS "batchYear",
               is_admin   AS "isAdmin",
+              qr_token   AS "qrToken",
               created_at AS "createdAt"
        FROM registrations
-       ORDER BY created_at DESC`,
+       ${whereClause}
+       ORDER BY created_at DESC
+       LIMIT 100`,
+      params,
     );
     res.json(rows);
   } catch (err) {
     console.error('Admin fetch registrations error:', err);
     res.status(500).json({ error: 'Failed to fetch registrations' });
+  }
+});
+
+// ── Administrators ───────────────────────────────────────────────────────────
+
+// GET /api/admin/admins
+router.get('/admins', async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id,
+              first_name AS "firstName",
+              last_name  AS "lastName",
+              email,
+              batch_year AS "batchYear",
+              created_at AS "createdAt"
+       FROM registrations
+       WHERE is_admin = TRUE
+       ORDER BY created_at DESC`,
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Admin list admins error:', err);
+    res.status(500).json({ error: 'Failed to fetch administrators' });
+  }
+});
+
+// POST /api/admin/admins
+router.post('/admins', async (req, res) => {
+  const { firstName, lastName, email, password, batchYear } = req.body;
+
+  if (validationError(res, {
+    firstName: () => validators.name(firstName),
+    lastName:  () => validators.name(lastName),
+    email:     () => validators.email(email),
+    password:  () => validators.password(password),
+    batchYear: () => validators.batchYear(batchYear),
+  })) return;
+
+  if (!batchYear) {
+    return res.status(400).json({ error: 'Validation failed', errors: { batchYear: 'required' } });
+  }
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const { rows } = await pool.query(
+      `INSERT INTO registrations (first_name, last_name, email, password, batch_year, is_admin)
+       VALUES ($1, $2, $3, $4, $5, TRUE)
+       RETURNING id, first_name AS "firstName", last_name AS "lastName",
+                 email, batch_year AS "batchYear", created_at AS "createdAt"`,
+      [firstName.trim(), lastName.trim(), email.trim().toLowerCase(), hashedPassword, batchYear],
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(400).json({ error: 'Email already registered' });
+    console.error('Admin create admin error:', err);
+    res.status(500).json({ error: 'Failed to create administrator' });
   }
 });
 

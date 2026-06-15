@@ -25,8 +25,13 @@ router.get('/stats', requireAdmin, async (_req, res) => {
 
     res.json({
       totalRegistered: parseInt(totalRows[0].count, 10),
+      total:           parseInt(totalRows[0].count, 10),
       totalCheckedIn:  parseInt(checkinRows[0].count, 10),
-      recentCheckIns:  recentRows,
+      checkedIn:       parseInt(checkinRows[0].count, 10),
+      recentCheckIns:  recentRows.map(row => ({
+        ...row,
+        name: `${row.firstName} ${row.lastName}`.trim(),
+      })),
     });
   } catch (err) {
     console.error('Checkin stats error:', err);
@@ -40,7 +45,7 @@ router.post('/:token', requireAdmin, async (req, res) => {
 
   try {
     const { rows: regRows } = await pool.query(
-      `SELECT id, first_name, last_name, batch_year FROM registrations WHERE qr_token = $1`,
+      `SELECT id, first_name, last_name, batch_year, email FROM registrations WHERE qr_token = $1`,
       [token],
     );
 
@@ -63,6 +68,7 @@ router.post('/:token', requireAdmin, async (req, res) => {
           firstName: registrant.first_name,
           lastName:  registrant.last_name,
           batchYear: registrant.batch_year,
+          email:     registrant.email,
         },
       });
     }
@@ -72,12 +78,18 @@ router.post('/:token', requireAdmin, async (req, res) => {
       [registrant.id, req.user.id],
     );
 
+    const fullName = `${registrant.first_name} ${registrant.last_name}`.trim();
     res.json({
       message: 'Check-in successful',
+      name: fullName,
+      fullName,
+      batchYear: registrant.batch_year,
+      email: registrant.email,
       registrant: {
         firstName: registrant.first_name,
         lastName:  registrant.last_name,
         batchYear: registrant.batch_year,
+        email:     registrant.email,
       },
       checkedInAt: inserted[0].checked_in_at,
     });

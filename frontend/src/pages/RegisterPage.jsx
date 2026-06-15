@@ -8,9 +8,12 @@ export default function RegisterPage() {
   return (
     <PageContainer>
       <div className="register-page">
+        <div className="register-spark register-spark--left" />
+        <div className="register-spark register-spark--right" />
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: 'easeOut' }}
           className="register-header"
         >
           <h1>Goldies Day 2026</h1>
@@ -18,7 +21,14 @@ export default function RegisterPage() {
           <Countdown />
         </motion.div>
 
-        <RegisterWizard />
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.12, ease: 'easeOut' }}
+          className="register-wizard"
+        >
+          <RegisterWizard />
+        </motion.div>
       </div>
     </PageContainer>
   );

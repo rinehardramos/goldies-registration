@@ -23,6 +23,7 @@ export default function StepReview({ registrants, onRemove, onAddAnother, onNext
             email: r.email,
             password: r.password,
             batchYear: r.batchYear,
+            invitationToken: r.invitationToken,
           });
           if (data.accessToken) {
             setAccessToken(data.accessToken);

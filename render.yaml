@@ -22,7 +22,7 @@ services:
       - key: RESEND_API_KEY
         sync: false
       - key: APP_URL
-        value: https://goldies2026.onrender.com
+        value: https://goldies.space
       - key: ADMIN_EMAIL
         sync: false
       - key: ADMIN_PASSWORD

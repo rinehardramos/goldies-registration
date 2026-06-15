@@ -80,6 +80,7 @@ const authRouter = require('./routes/auth');
 
 // /api/login  – top-level login endpoint the frontend uses
 app.post('/api/login', authLimiter, authRouter.loginHandler);
+app.post('/api/register', authLimiter, authRouter.registerHandler);
 
 app.use('/api/auth',        authLimiter, authRouter);
 app.use('/api/qr',          qrLimiter,  require('./routes/qr'));

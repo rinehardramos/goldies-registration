@@ -68,8 +68,7 @@ const loginHandler = async (req, res) => {
   }
 };
 
-// POST /api/auth/register
-router.post('/register', async (req, res) => {
+const registerHandler = async (req, res) => {
   const { firstName, lastName, email, password, batchYear, invitationToken } = req.body;
 
   if (validationError(res, {
@@ -133,7 +132,10 @@ router.post('/register', async (req, res) => {
     console.error('Register error:', err);
     res.status(500).json({ error: 'Failed to register' });
   }
-});
+};
+
+// POST /api/auth/register
+router.post('/register', registerHandler);
 
 // POST /api/auth/login  (and also exported as loginHandler for /api/login)
 router.post('/login', loginHandler);
@@ -185,3 +187,4 @@ router.post('/logout', requireAuth, async (req, res) => {
 
 module.exports = router;
 module.exports.loginHandler = loginHandler;
+module.exports.registerHandler = registerHandler;

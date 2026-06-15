@@ -33,7 +33,7 @@ const seedAdmin = async () => {
     // 2. Seed admin user
     // Provide sensible defaults that can be overridden via Render Environment Variables
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@goldies.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'AdminPass123!';
     const adminName = process.env.ADMIN_NAME || 'Super Admin';
     const adminBatch = process.env.ADMIN_BATCH || 'Admin';
 

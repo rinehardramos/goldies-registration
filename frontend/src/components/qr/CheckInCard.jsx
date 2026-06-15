@@ -105,7 +105,7 @@ const CheckInCard = ({ token, registrant, alreadyCheckedIn: initialAlreadyChecke
         <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, marginBottom: '12px' }}>
           {status === 'success' && 'Check-In Successful!'}
           {status === 'duplicate' && 'Already Checked In'}
-          {status === 'pending' && 'Confirm Check-In'}
+          {status === 'pending' && 'Check In'}
         </h2>
 
         {registrant && (
@@ -141,7 +141,7 @@ const CheckInCard = ({ token, registrant, alreadyCheckedIn: initialAlreadyChecke
               onClick={handleCheckIn}
               fullWidth
             >
-              Confirm Check-In
+              Check In
             </Button>
           </div>
         )}

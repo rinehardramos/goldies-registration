@@ -90,6 +90,14 @@ const migrate = async (retries = 5) => {
           ['Admin', 'User', adminEmail, hashed, '2000'],
         );
         console.log('Admin seeded:', adminEmail);
+      } else {
+        const bcrypt = require('bcryptjs');
+        const hashed = await bcrypt.hash(adminPassword, 10);
+        await pool.query(
+          'UPDATE registrations SET password = $1, is_admin = TRUE WHERE email = $2',
+          [hashed, adminEmail],
+        );
+        console.log('Admin credentials verified:', adminEmail);
       }
 
       console.log('Migration complete – all tables ready.');

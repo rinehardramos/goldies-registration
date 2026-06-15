@@ -22,10 +22,10 @@ const Dashboard = () => {
   }
 
   const cards = [
-    { label: 'Registered',   value: stats?.registered   ?? 0, Icon: Users,       color: 'var(--color-info)' },
-    { label: 'Invitations',  value: stats?.invitations  ?? 0, Icon: Mail,        color: 'var(--color-maroon)' },
-    { label: 'Pending',      value: stats?.pending      ?? 0, Icon: Clock,       color: 'var(--color-warning)' },
-    { label: 'Checked In',   value: stats?.checkedIn    ?? 0, Icon: CheckSquare, color: 'var(--color-success)' },
+    { label: 'Registered',   value: stats?.totalRegistered    ?? stats?.registered  ?? 0, icon: Users,       color: 'var(--color-info)' },
+    { label: 'Invitations',  value: stats?.totalInvitations   ?? stats?.invitations ?? 0, icon: Mail,        color: 'var(--color-maroon)' },
+    { label: 'Pending',      value: stats?.pendingInvitations ?? stats?.pending     ?? 0, icon: Clock,       color: 'var(--color-warning)' },
+    { label: 'Checked In',   value: stats?.totalCheckedIn     ?? stats?.checkedIn   ?? 0, icon: CheckSquare, color: 'var(--color-success)' },
   ];
 
   return (
@@ -34,9 +34,9 @@ const Dashboard = () => {
         Overview
       </h2>
       <div className="stats-grid">
-        {cards.map(({ label, value, Icon, color }) => (
+        {cards.map(({ label, value, icon, color }) => (
           <div key={label} className="stat-card">
-            <Icon size={24} style={{ color }} />
+            {React.createElement(icon, { size: 24, style: { color } })}
             <span className="stat-value" style={{ color }}>{value}</span>
             <span className="stat-label">{label}</span>
           </div>

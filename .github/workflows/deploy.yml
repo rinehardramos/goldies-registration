@@ -1,19 +1,37 @@
-name: Deploy to Render
+name: Validate Railway Deploy Source
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  deploy:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to Render
-        if: github.ref == 'refs/heads/main'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Check backend syntax
+        working-directory: backend
         run: |
-          curl --fail --show-error --silent \
-               -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-               -X POST https://api.render.com/v1/blueprints/${{ secrets.RENDER_BLUEPRINT_ID }}/sync
+          node -c index.js
+          node -c routes/auth.js
+          node -c routes/admin.js
+          node -c routes/checkin.js
+          node -c routes/qr.js
+          node -c seed.js

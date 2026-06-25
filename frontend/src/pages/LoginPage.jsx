@@ -8,6 +8,7 @@ import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Countdown from '../components/Countdown';
+import bluepointLogo from '../assets/bluepoint-logo.png';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -44,7 +45,12 @@ export default function LoginPage() {
           animate={{ opacity: 1, y: 0 }}
           className="login-header"
         >
-          <h1>Goldies Day 2026</h1>
+          <p className="login-eyebrow">Annual Celebration</p>
+          <h1 className="login-title">
+            Goldies&nbsp;Day <span className="login-title-year">2026</span>
+          </h1>
+          <span className="login-divider" aria-hidden="true" />
+          <p className="login-tagline">Let&apos;s bleed gold!</p>
           <Countdown />
         </motion.div>
 
@@ -84,6 +90,16 @@ export default function LoginPage() {
             Don&apos;t have an account? <Link to="/register">Register here</Link>
           </p>
         </Card>
+
+        <a
+          className="powered-by"
+          href="https://blueptsolution.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span>Powered by</span>
+          <img src={bluepointLogo} alt="Bluepoint Solutions" />
+        </a>
       </div>
     </PageContainer>
   );

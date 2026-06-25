@@ -964,7 +964,7 @@ a:hover {
 }
 
 .powered-by img {
-  height: 20px;
+  height: 100px;
   width: auto;
   display: block;
 }
@@ -1212,6 +1212,14 @@ a:hover {
   .powered-by {
     position: static;
     transform: none;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .powered-by img {
+    height: auto;
+    width: 100%;
+    max-width: 300px;
   }
 
   .stats-grid {

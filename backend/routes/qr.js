@@ -57,6 +57,41 @@ router.get('/:token', async (req, res) => {
       });
     }
 
+    // Check attendees table (attendee's personal QR)
+    const { rows: attRows } = await pool.query(
+      `SELECT a.id, a.full_name, a.batch_year, a.email,
+              c.checked_in_at
+       FROM attendees a
+       LEFT JOIN check_ins c ON c.attendee_id = a.id
+       WHERE a.qr_token = $1 AND a.is_archived = FALSE`,
+      [token],
+    );
+    if (attRows.length) {
+      const att = attRows[0];
+      const parts = String(att.full_name || '').trim().split(/\s+/);
+      const registrant = {
+        id: att.id,
+        firstName: parts[0] || att.full_name || '',
+        lastName: parts.slice(1).join(' '),
+        batchYear: att.batch_year,
+        email: att.email,
+      };
+      if (isEventDay) {
+        return res.json({
+          type: 'checkin',
+          registrant,
+          alreadyCheckedIn: Boolean(att.checked_in_at),
+          checkedInAt: att.checked_in_at || null,
+          eventDate: eventDate?.toISOString() || null,
+        });
+      }
+      return res.json({
+        type: 'already_registered',
+        registrant,
+        eventDate: eventDate?.toISOString() || null,
+      });
+    }
+
     // Check invitations table
     const { rows: invRows } = await pool.query(
       `SELECT id, email, status FROM invitations WHERE qr_token = $1`,

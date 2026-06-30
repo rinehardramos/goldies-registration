@@ -19,7 +19,8 @@ const ALLOWED_SETTINGS_KEYS = new Set(['event_date']);
 router.get('/dashboard', async (_req, res) => {
   try {
     const { rows: regRows } = await pool.query(
-      `SELECT COUNT(*) AS count FROM registrations WHERE is_admin = FALSE`,
+      `SELECT (SELECT COUNT(*) FROM registrations WHERE is_admin = FALSE)
+            + (SELECT COUNT(*) FROM attendees     WHERE is_archived = FALSE) AS count`,
     );
     const { rows: invRows } = await pool.query(
       `SELECT COUNT(*) AS total,
@@ -27,7 +28,8 @@ router.get('/dashboard', async (_req, res) => {
        FROM invitations`,
     );
     const { rows: checkinRows } = await pool.query(
-      `SELECT COUNT(DISTINCT registration_id) AS count FROM check_ins`,
+      `SELECT (SELECT COUNT(DISTINCT registration_id) FROM check_ins WHERE registration_id IS NOT NULL)
+            + (SELECT COUNT(DISTINCT attendee_id)     FROM check_ins WHERE attendee_id     IS NOT NULL) AS count`,
     );
 
     res.json({
@@ -218,6 +220,7 @@ router.get('/attendees', async (_req, res) => {
               phone,
               batch_year  AS "batchYear",
               address,
+              qr_token    AS "qrToken",
               created_at  AS "createdAt"
        FROM attendees
        WHERE is_archived = FALSE
@@ -227,6 +230,43 @@ router.get('/attendees', async (_req, res) => {
   } catch (err) {
     console.error('Admin fetch attendees error:', err);
     res.status(500).json({ error: 'Failed to fetch attendees' });
+  }
+});
+
+// POST /api/admin/attendees/:id/resend-confirmation  – email the attendee their check-in QR
+router.post('/attendees/:id/resend-confirmation', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT full_name, email, batch_year, qr_token FROM attendees WHERE id = $1 AND is_archived = FALSE`,
+      [id],
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Attendee not found' });
+
+    const { full_name, email, batch_year, qr_token } = rows[0];
+    const parts = String(full_name || '').trim().split(/\s+/);
+    const firstName = parts[0] || full_name || '';
+    const lastName  = parts.slice(1).join(' ');
+
+    const { sendConfirmationEmail } = require('../services/email');
+    const result = await sendConfirmationEmail(email, {
+      firstName,
+      lastName,
+      batchYear: batch_year,
+      qrToken:   qr_token,
+    });
+
+    if (result?.error) {
+      console.error('Attendee resend confirmation rejected:', JSON.stringify(result.error));
+      return res.status(502).json({ error: 'Email provider rejected the request' });
+    }
+
+    console.log('Attendee confirmation resent to', email, 'id:', result?.data?.id ?? result?.id);
+    res.json({ message: 'Confirmation email resent' });
+  } catch (err) {
+    console.error('Attendee resend confirmation error:', err.message);
+    res.status(500).json({ error: 'Failed to resend confirmation email' });
   }
 });
 

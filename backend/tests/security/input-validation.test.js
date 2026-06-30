@@ -157,6 +157,7 @@ describe('GET /api/qr/:token — UUID validation', () => {
     db.query
       .mockResolvedValueOnce({ rows: [{ value: '2026-07-25T10:00:00+08:00' }] }) // settings
       .mockResolvedValueOnce({ rows: [] }) // registrations (not found)
+      .mockResolvedValueOnce({ rows: [] }) // attendees (not found)
       .mockResolvedValueOnce({ rows: [] }); // invitations (not found)
     const uuid = '123e4567-e89b-12d3-a456-426614174000';
     const res  = await request(app).get(`/api/qr/${uuid}`);

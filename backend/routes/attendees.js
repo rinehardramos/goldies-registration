@@ -13,6 +13,7 @@ const ATTENDEE_COLS = `
   phone,
   batch_year  AS "batchYear",
   address,
+  qr_token    AS "qrToken",
   is_archived AS "isArchived",
   created_at  AS "createdAt"
 `;

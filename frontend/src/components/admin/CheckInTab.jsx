@@ -147,7 +147,7 @@ const CheckInTab = () => {
     }
     searchTimeout.current = setTimeout(async () => {
       try {
-        const { data } = await api.get(`/api/admin/registrations?search=${encodeURIComponent(value)}`);
+        const { data } = await api.get(`/api/checkin/search?q=${encodeURIComponent(value)}`);
         setSearchResults(Array.isArray(data) ? data.slice(0, 10) : []);
       } catch {
         setSearchResults([]);
@@ -242,12 +242,14 @@ const CheckInTab = () => {
                 const name = `${reg.firstName ?? ''} ${reg.lastName ?? ''}`.trim() || reg.fullName || 'Unknown';
                 const token = reg.qrToken ?? reg.token ?? reg.id;
                 return (
-                  <div key={reg.id} className="registrant-card" style={{ justifyContent: 'space-between' }}>
+                  <div key={`${reg.type ?? 'reg'}-${reg.id}`} className="registrant-card" style={{ justifyContent: 'space-between' }}>
                     <div className="registrant-info">
                       <strong>{name}</strong>
-                      <span className="registrant-type">{reg.batchYear ?? ''} - {reg.email ?? ''}</span>
+                      <span className="registrant-type">
+                        {reg.type === 'attendee' ? 'Attendee · ' : ''}{reg.batchYear ?? ''}{reg.email ? ` - ${reg.email}` : ''}
+                      </span>
                     </div>
-                    <Button size="sm" loading={checkingIn === token} onClick={() => doCheckIn(token)}>
+                    <Button size="sm" loading={checkingIn === token} disabled={!token} onClick={() => doCheckIn(token)}>
                       Check In
                     </Button>
                   </div>

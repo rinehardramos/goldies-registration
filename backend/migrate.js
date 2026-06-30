@@ -30,6 +30,7 @@ const migrate = async (retries = 5) => {
           phone        TEXT UNIQUE,
           batch_year   TEXT,
           address      TEXT,
+          qr_token     UUID UNIQUE DEFAULT gen_random_uuid(),
           is_archived  BOOLEAN DEFAULT FALSE,
           created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -38,6 +39,9 @@ const migrate = async (retries = 5) => {
 
       // Phone is optional — relax NOT NULL on pre-existing databases (idempotent)
       await pool.query(`ALTER TABLE attendees ALTER COLUMN phone DROP NOT NULL`);
+
+      // Attendees get their own QR token for check-in; backfills existing rows (idempotent)
+      await pool.query(`ALTER TABLE attendees ADD COLUMN IF NOT EXISTS qr_token UUID UNIQUE DEFAULT gen_random_uuid()`);
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS invitations (
@@ -54,10 +58,14 @@ const migrate = async (retries = 5) => {
         CREATE TABLE IF NOT EXISTS check_ins (
           id                SERIAL PRIMARY KEY,
           registration_id   INTEGER REFERENCES registrations(id),
+          attendee_id       INTEGER REFERENCES attendees(id),
           checked_in_by     INTEGER REFERENCES registrations(id),
           checked_in_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
+
+      // Support attendee check-ins on pre-existing databases (idempotent)
+      await pool.query(`ALTER TABLE check_ins ADD COLUMN IF NOT EXISTS attendee_id INTEGER REFERENCES attendees(id)`);
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS settings (

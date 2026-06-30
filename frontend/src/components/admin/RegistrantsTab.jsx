@@ -84,13 +84,25 @@ const RegistrantsTab = () => {
 
   const cancelEdit = () => setEditingUid(null);
 
-  const handleResendConfirmation = async (id) => {
-    setResendingId(id);
+  const handleResendConfirmation = async (row) => {
+    setResendingId(row.uid);
     try {
-      await api.post(`/api/admin/registrations/${id}/resend-confirmation`);
+      await api.post(`/api/admin/registrations/${row.id}/resend-confirmation`);
       toast.success('Confirmation email resent');
     } catch {
       toast.error('Failed to resend confirmation email');
+    } finally {
+      setResendingId(null);
+    }
+  };
+
+  const handleResendInvite = async (row) => {
+    setResendingId(row.uid);
+    try {
+      await api.post(`/api/admin/attendees/${row.id}/resend-confirmation`);
+      toast.success('Invite resent');
+    } catch {
+      toast.error('Failed to resend invite');
     } finally {
       setResendingId(null);
     }
@@ -263,17 +275,25 @@ const RegistrantsTab = () => {
                               <Edit2 size={14} /> Edit
                             </button>
                             <button
-                              onClick={() => handleResendConfirmation(row.id)}
-                              disabled={resendingId === row.id}
+                              onClick={() => handleResendConfirmation(row)}
+                              disabled={resendingId === row.uid}
                               style={{ background: 'none', border: '1px solid var(--color-gold)', color: 'var(--color-gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-sm)', borderRadius: 'var(--radius-sm)', padding: '2px 8px' }}
                               title="Resend confirmation email"
                             >
-                              <RefreshCw size={13} style={resendingId === row.id ? { animation: 'spin 1s linear infinite' } : {}} />
-                              {resendingId === row.id ? 'Sending…' : 'Resend'}
+                              <RefreshCw size={13} style={resendingId === row.uid ? { animation: 'spin 1s linear infinite' } : {}} />
+                              {resendingId === row.uid ? 'Sending…' : 'Resend'}
                             </button>
                           </div>
                         ) : (
-                          <span style={{ color: 'var(--color-text-muted)' }}>—</span>
+                          <button
+                            onClick={() => handleResendInvite(row)}
+                            disabled={resendingId === row.uid}
+                            style={{ background: 'none', border: '1px solid var(--color-maroon)', color: 'var(--color-maroon)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-sm)', borderRadius: 'var(--radius-sm)', padding: '2px 8px' }}
+                            title="Resend invite (confirmation email with check-in QR)"
+                          >
+                            <RefreshCw size={13} style={resendingId === row.uid ? { animation: 'spin 1s linear infinite' } : {}} />
+                            {resendingId === row.uid ? 'Sending…' : 'Resend Invite'}
+                          </button>
                         )}
                       </td>
                     </>

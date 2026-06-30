@@ -39,7 +39,7 @@ router.post('/', requireAuth, async (req, res) => {
       `INSERT INTO attendees (user_id, full_name, email, phone, batch_year, address)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING ${ATTENDEE_COLS}`,
-      [userId, fullName.trim(), email.trim().toLowerCase(), phone.trim(), batchYear || null, address || null],
+      [userId, fullName.trim(), email.trim().toLowerCase(), phone?.trim() || null, batchYear || null, address || null],
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -122,7 +122,7 @@ router.put('/:id', requireAuth, async (req, res) => {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $6 AND is_archived = FALSE
        RETURNING ${ATTENDEE_COLS}`,
-      [fullName.trim(), email.trim().toLowerCase(), phone.trim(), batchYear || null, address || null, id],
+      [fullName.trim(), email.trim().toLowerCase(), phone?.trim() || null, batchYear || null, address || null, id],
     );
 
     if (!rows.length) return res.status(404).json({ error: 'Attendee not found or archived' });

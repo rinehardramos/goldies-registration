@@ -35,9 +35,10 @@ const validators = {
   },
 
   phone(v) {
+    if (v === undefined || v === null || v === '') return null; // optional
     if (typeof v !== 'string') return 'must be a string';
     const s = v.trim();
-    if (!s) return 'required';
+    if (!s) return null; // blank is allowed (optional)
     if (s.length < 7 || s.length > 20) return 'must be 7–20 characters';
     if (!PHONE_RE.test(s)) return 'invalid phone format';
     return null;

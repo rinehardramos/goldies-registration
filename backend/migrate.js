@@ -27,7 +27,7 @@ const migrate = async (retries = 5) => {
           user_id      INTEGER REFERENCES registrations(id) ON DELETE CASCADE,
           full_name    TEXT NOT NULL,
           email        TEXT NOT NULL UNIQUE,
-          phone        TEXT NOT NULL UNIQUE,
+          phone        TEXT UNIQUE,
           batch_year   TEXT,
           address      TEXT,
           is_archived  BOOLEAN DEFAULT FALSE,
@@ -35,6 +35,9 @@ const migrate = async (retries = 5) => {
           updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
+
+      // Phone is optional — relax NOT NULL on pre-existing databases (idempotent)
+      await pool.query(`ALTER TABLE attendees ALTER COLUMN phone DROP NOT NULL`);
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS invitations (

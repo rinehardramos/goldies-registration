@@ -406,11 +406,10 @@ function AttendeesSection() {
                 required
               />
               <Input
-                label="Phone *"
+                label="Phone"
                 type="tel"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                required
               />
             </div>
             <div style={twoColStyle}>

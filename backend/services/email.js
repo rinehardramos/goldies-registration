@@ -55,31 +55,44 @@ const sendConfirmationEmail = async (email, { firstName, lastName, batchYear, qr
   const qrPageUrl  = `${BASE_URL}/qr/${qrToken}`;
   const profileUrl = `${BASE_URL}/profile`;
 
-  let qrDataURL = '';
+  // Render the QR as a PNG buffer and send it as an inline (cid) attachment.
+  // Base64 data-URI images are stripped by Gmail/Outlook, so the QR must ride
+  // along as a real attachment referenced via <img src="cid:qrcode"> to display
+  // reliably in the email body. Encoded content is unchanged (${qrPageUrl}).
+  const attachments = [];
   try {
-    qrDataURL = await QRCode.toDataURL(qrPageUrl, {
+    const qrBuffer = await QRCode.toBuffer(qrPageUrl, {
+      type: 'png',
       width: 180,
       margin: 2,
+      errorCorrectionLevel: 'H',
       color: { dark: '#800000', light: '#FFFFFF' },
     });
-  } catch (_) {}
+    attachments.push({ filename: 'qr.png', content: qrBuffer, contentId: 'qrcode' });
+  } catch (err) {
+    console.error('QR generation failed for confirmation email:', err.message);
+  }
 
   const html = tryRenderTemplate('confirmation', {
-    firstName, lastName, batchYear, qrToken,
-    qrDataURL, qrPageUrl, profileUrl,
+    firstName, lastName, batchYear, qrToken, email,
+    qrPageUrl, profileUrl,
     year: new Date().getFullYear(),
   }) || `<p>Hi ${firstName},</p>
          <p>You are now registered for the Golden Years Reunion ${new Date().getFullYear()}!</p>
          <p>Batch year: ${batchYear}</p>
+         <p>Email: ${email}</p>
          <p><a href="${profileUrl}">View / Update My Profile</a></p>
          <p><a href="${qrPageUrl}">Open My QR Page</a></p>`;
 
-  return resend.emails.send({
+  const payload = {
     from:    FROM,
     to:      [email],
     subject: 'Registration Confirmed – Golden Years Reunion 2026',
     html,
-  });
+  };
+  if (attachments.length) payload.attachments = attachments;
+
+  return resend.emails.send(payload);
 };
 
 // Legacy export kept for backward compat

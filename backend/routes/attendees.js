@@ -42,7 +42,30 @@ router.post('/', requireAuth, async (req, res) => {
        RETURNING ${ATTENDEE_COLS}`,
       [userId, fullName.trim(), email.trim().toLowerCase(), phone?.trim() || null, batchYear || null, address || null],
     );
-    res.status(201).json(rows[0]);
+    const attendee = rows[0];
+
+    // Send the attendee their own confirmation email with an inline QR code
+    // (non-blocking — a mail failure must never fail the registration).
+    try {
+      const parts = String(attendee.fullName || '').trim().split(/\s+/);
+      const { sendConfirmationEmail } = require('../services/email');
+      sendConfirmationEmail(attendee.email, {
+        firstName: parts[0] || attendee.fullName || '',
+        lastName:  parts.slice(1).join(' '),
+        batchYear: attendee.batchYear,
+        qrToken:   attendee.qrToken,
+      }).then(result => {
+        if (result?.error) {
+          console.error('Attendee confirmation email rejected by Resend:', JSON.stringify(result.error));
+        } else {
+          console.log('Attendee confirmation email sent, id:', result?.data?.id ?? result?.id);
+        }
+      }).catch(err => console.error('Attendee confirmation email failed:', err.message));
+    } catch (err) {
+      console.error('Attendee confirmation email service error:', err.message);
+    }
+
+    res.status(201).json(attendee);
   } catch (err) {
     if (err.code === '23505') {
       if (err.constraint === 'attendees_email_key') return res.status(400).json({ error: 'Email already registered as an attendee' });
